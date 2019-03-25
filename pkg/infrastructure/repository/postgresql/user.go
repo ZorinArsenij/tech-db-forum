@@ -2,7 +2,6 @@ package postgresql
 
 import (
 	"errors"
-	"fmt"
 	"github.com/ZorinArsenij/tech-db-forum/pkg/domain/user"
 	"github.com/jackc/pgx"
 )
@@ -22,13 +21,13 @@ const (
 	FROM client 
 	WHERE email = $1 OR nickname = $2;`
 
-	createUser = `INSERT INTO client (email, nickname, fullname, about) 
-	VALUES ($1, $2, $3, $4) 
+	createUser = `INSERT INTO client (email, nickname, fullname, about)
+	VALUES ($1, $2, $3, $4)
 	RETURNING email, nickname, fullname, about;`
 
 	getUserIdAndNicknameByNickname = `SELECT id, nickname
 	FROM client
-	WHERE nickname = $1`
+	WHERE nickname = $1;`
 )
 
 func NewUserRepo(conn *pgx.ConnPool) *User {
@@ -76,18 +75,18 @@ func (u *User) CreateUser(data *user.User) (*user.Users, error) {
 
 	users := make(user.Users, 0, 2)
 
-	rows, err := tx.Query(getUsersWithEmailAndNickname, data.Email, data.Nickname)
+	rows, _ := tx.Query(getUsersWithEmailAndNickname, data.Email, data.Nickname)
 
 	for rows.Next() {
 		var row user.User
 		rows.Scan(&row.Email, &row.Nickname, &row.Fullname, &row.About)
 		users = append(users, row)
 	}
+	rows.Close()
 
 	if len(users) == 0 {
 		var created user.User
 		if err := tx.QueryRow(createUser, data.Email, data.Nickname, data.Fullname, data.About).Scan(&created.Email, &created.Nickname, &created.Fullname, &created.About); err != nil {
-			fmt.Println(err)
 			return nil, err
 		}
 		users = append(users, created)

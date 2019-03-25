@@ -14,11 +14,16 @@ import (
 func main() {
 	conn, err := pgx.NewConnPool(config.Config)
 	if err != nil {
-		log.Fatal("database connection refused")
+		log.Fatal("database connection refused1")
 	}
-
 	if err := migrations.MakeMigrations(conn, "build/schema/0_initial.sql"); err != nil {
 		log.Fatal("make migrations failed")
+	}
+	conn.Close()
+
+	conn, err = pgx.NewConnPool(config.Config)
+	if err != nil {
+		log.Fatal("database connection refused2")
 	}
 
 	userInteractor := usecase.NewUserInteractor(postgresql.NewUserRepo(conn))

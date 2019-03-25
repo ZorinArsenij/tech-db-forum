@@ -3,32 +3,27 @@ package migrations
 import (
 	"github.com/jackc/pgx"
 	"io/ioutil"
-	"os"
 )
 
-func MakeMigrations(conn *pgx.ConnPool, path string) (err error) {
+func MakeMigrations(conn *pgx.ConnPool, path string) error {
 	tx, err := conn.Begin()
 	if err != nil {
-		return
+		return err
 	}
 	defer tx.Rollback()
 
-	file, err := os.OpenFile(path, os.O_RDONLY, 0666)
+	migrations, err := ioutil.ReadFile(path)
 	if err != nil {
-		return
-	}
-	defer file.Close()
-
-	migrations, err := ioutil.ReadAll(file)
-	if err != nil {
-		return
+		return err
 	}
 
-	_, err = tx.Exec(string(migrations))
-	if err != nil {
-		return
+	if _, err = tx.Exec(string(migrations)); err != nil {
+		return err
 	}
 
-	tx.Commit()
-	return
+	if err = tx.Commit(); err != nil {
+		return err
+	}
+
+	return nil
 }

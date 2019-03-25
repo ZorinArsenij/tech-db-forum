@@ -1,7 +1,6 @@
 package user
 
 import (
-	"fmt"
 	"github.com/ZorinArsenij/tech-db-forum/pkg/domain/message"
 	"github.com/ZorinArsenij/tech-db-forum/pkg/domain/user"
 	"github.com/ZorinArsenij/tech-db-forum/pkg/usecase"
@@ -132,7 +131,6 @@ func CreateUser(interactor *usecase.UserInteractor) fasthttp.RequestHandler {
 			}
 		default:
 			{
-				fmt.Println(err)
 				ctx.SetStatusCode(fasthttp.StatusInternalServerError)
 				return
 			}
