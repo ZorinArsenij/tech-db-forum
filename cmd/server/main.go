@@ -1,18 +1,28 @@
 package main
 
 import (
-	"github.com/ZorinArsenij/tech-db-forum/configs/postgresql"
-	"github.com/ZorinArsenij/tech-db-forum/pkg/delivery/http"
-	"github.com/ZorinArsenij/tech-db-forum/pkg/infrastructure/repository/postgresql"
-	"github.com/ZorinArsenij/tech-db-forum/pkg/infrastructure/repository/postgresql/migrations"
-	"github.com/ZorinArsenij/tech-db-forum/pkg/usecase"
+	"github.com/ZorinArsenij/tech-db-forum/internal/app/delivery/http"
+	"github.com/ZorinArsenij/tech-db-forum/internal/app/infrastructure/repository/postgresql"
+	"github.com/ZorinArsenij/tech-db-forum/internal/app/infrastructure/repository/postgresql/migrations"
+	"github.com/ZorinArsenij/tech-db-forum/internal/app/usecase"
 	"github.com/jackc/pgx"
 	"github.com/valyala/fasthttp"
 	"log"
 )
 
 func main() {
-	conn, err := pgx.NewConnPool(config.Config)
+	pgxConf := pgx.ConnPoolConfig{
+		ConnConfig: pgx.ConnConfig{
+			Host:     "localhost",
+			Port:     5432,
+			Database: "docker",
+			User:     "docker",
+			Password: "docker",
+		},
+		MaxConnections: 50,
+	}
+
+	conn, err := pgx.NewConnPool(pgxConf)
 	if err != nil {
 		log.Fatal("database connection refused1")
 	}
@@ -21,7 +31,7 @@ func main() {
 	}
 	conn.Close()
 
-	conn, err = pgx.NewConnPool(config.Config)
+	conn, err = pgx.NewConnPool(pgxConf)
 	if err != nil {
 		log.Fatal("database connection refused2")
 	}
