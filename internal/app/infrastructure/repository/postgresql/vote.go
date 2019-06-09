@@ -7,17 +7,23 @@ import (
 )
 
 const (
-	createVote = `INSERT INTO vote (voice, user_id, thread_id)
-	VALUES ($1, $2, $3)`
-
-	getVote = `SELECT id, voice
-	FROM vote
-	WHERE user_id = $1 AND thread_id = $2`
-
-	updateVote = `UPDATE vote
-	SET voice = $1
-	WHERE id = $2`
+	createVote = "createVote"
+	getVote    = "getVote"
+	updateVote = "updateVote"
 )
+
+var voteQueries = map[string]string{
+	createVote: `INSERT INTO vote (voice, user_id, thread_id)
+	VALUES ($1, $2, $3)`,
+
+	getVote: `SELECT id, voice
+	FROM vote
+	WHERE user_id = $1 AND thread_id = $2`,
+
+	updateVote: `UPDATE vote
+	SET voice = $1
+	WHERE id = $2`,
+}
 
 func NewVoteRepo(conn *pgx.ConnPool) *Vote {
 	return &Vote{

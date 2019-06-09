@@ -9,23 +9,38 @@ import (
 )
 
 const (
-	getThreadBySlug = `SELECT id, slug, title, message, forum_slug, user_nickname, created, votes
-	FROM thread
-	WHERE slug = $1;`
+	getThreadBySlug                     = "getThreadBySlug"
+	getThreadById                       = "getThreadById"
+	getThreadByIdOrSlug                 = "getThreadByIdOrSlug"
+	getThreadShortBySlugOrId            = "getThreadShortBySlugOrId"
+	createThread                        = "createThread"
+	getThreadsByForumSlugLimit          = "getThreadsByForumSlugLimit"
+	getThreadsByForumSlugLimitDesc      = "getThreadsByForumSlugLimitDesc"
+	getThreadsByForumSlugLimitSince     = "getThreadsByForumSlugLimitSince"
+	getThreadsByForumSlugLimitSinceDesc = "getThreadsByForumSlugLimitSinceDesc"
+	checkThreadByIdOrSlug               = "checkThreadByIdOrSlug"
+	updateThreadVotes                   = "updateThreadVotes"
+	updateThread                        = "updateThread"
+)
 
-	getThreadById = `SELECT id, slug, title, message, forum_slug, user_nickname, created, votes
+var threadQueries = map[string]string{
+	getThreadBySlug: `SELECT id, slug, title, message, forum_slug, user_nickname, created, votes
 	FROM thread
-	WHERE id = $1;`
+	WHERE slug = $1;`,
 
-	getThreadByIdOrSlug = `SELECT id, slug, title, message, forum_slug, user_nickname, created, votes
+	getThreadById: `SELECT id, slug, title, message, forum_slug, user_nickname, created, votes
 	FROM thread
-	WHERE slug = $1 OR id::TEXT = $1`
+	WHERE id = $1;`,
 
-	getThreadShortBySlugOrId = `SELECT id, forum_slug
+	getThreadByIdOrSlug: `SELECT id, slug, title, message, forum_slug, user_nickname, created, votes
 	FROM thread
-	WHERE slug = $1 OR id::TEXT = $1`
+	WHERE slug = $1 OR id::TEXT = $1`,
 
-	createThread = `INSERT INTO thread (slug, title, message, forum_id, forum_slug, user_id, user_nickname, created)
+	getThreadShortBySlugOrId: `SELECT id, forum_slug
+	FROM thread
+	WHERE slug = $1 OR id::TEXT = $1`,
+
+	createThread: `INSERT INTO thread (slug, title, message, forum_id, forum_slug, user_id, user_nickname, created)
 	VALUES (
 		$1,
 		$2,
@@ -36,47 +51,47 @@ const (
 		$7,
 		$8
 	)
-	RETURNING id, slug, title, message, forum_slug, user_nickname, created, votes;`
+	RETURNING id, slug, title, message, forum_slug, user_nickname, created, votes;`,
 
-	getThreadsByForumSlugLimit = `SELECT id, slug, title, message, forum_slug, user_nickname, created, votes
+	getThreadsByForumSlugLimit: `SELECT id, slug, title, message, forum_slug, user_nickname, created, votes
 	FROM thread
 	WHERE forum_slug = $1
 	ORDER BY created
- 	LIMIT $2;`
+ 	LIMIT $2;`,
 
-	getThreadsByForumSlugLimitDesc = `SELECT id, slug, title, message, forum_slug, user_nickname, created, votes
+	getThreadsByForumSlugLimitDesc: `SELECT id, slug, title, message, forum_slug, user_nickname, created, votes
 	FROM thread
 	WHERE forum_slug = $1
 	ORDER BY created DESC
-	LIMIT $2;`
+	LIMIT $2;`,
 
-	getThreadsByForumSlugLimitSince = `SELECT id, slug, title, message, forum_slug, user_nickname, created, votes
+	getThreadsByForumSlugLimitSince: `SELECT id, slug, title, message, forum_slug, user_nickname, created, votes
 	FROM thread
 	WHERE forum_slug = $1 AND created >= $3::TEXT::TIMESTAMPTZ
 	ORDER BY created
-	LIMIT $2;`
+	LIMIT $2;`,
 
-	getThreadsByForumSlugLimitSinceDesc = `SELECT id, slug, title, message, forum_slug, user_nickname, created, votes
+	getThreadsByForumSlugLimitSinceDesc: `SELECT id, slug, title, message, forum_slug, user_nickname, created, votes
 	FROM thread
 	WHERE forum_slug = $1 AND created <= $3::TEXT::TIMESTAMPTZ
 	ORDER BY created DESC
- 	LIMIT $2;`
+ 	LIMIT $2;`,
 
-	checkThreadByIdOrSlug = `SELECT id, slug
+	checkThreadByIdOrSlug: `SELECT id, slug
 	FROM thread
-	WHERE slug = $1 OR id::TEXT = $1`
+	WHERE slug = $1 OR id::TEXT = $1`,
 
-	updateThreadVotes = `UPDATE thread
+	updateThreadVotes: `UPDATE thread
 	SET votes = votes + $1
 	WHERE id = $2
-	RETURNING id, slug, title, message, forum_slug, user_nickname, created, votes`
+	RETURNING id, slug, title, message, forum_slug, user_nickname, created, votes`,
 
-	updateThread = `UPDATE thread
+	updateThread: `UPDATE thread
 	SET title = COALESCE($1, title), 
 			message = COALESCE($2, message)
 	WHERE id = $3
-	RETURNING id, slug, title, message, forum_slug, user_nickname, created, votes`
-)
+	RETURNING id, slug, title, message, forum_slug, user_nickname, created, votes`,
+}
 
 func NewThreadRepo(conn *pgx.ConnPool) *Thread {
 	return &Thread{

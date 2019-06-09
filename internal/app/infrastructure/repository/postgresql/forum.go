@@ -2,38 +2,52 @@ package postgresql
 
 import (
 	"errors"
-
 	"github.com/ZorinArsenij/tech-db-forum/internal/app/domain/forum"
+
 	"github.com/ZorinArsenij/tech-db-forum/internal/app/domain/user"
 	"github.com/jackc/pgx"
 )
 
 const (
-	getForumBySlug = `SELECT slug, title, posts, threads, user_nickname
-	FROM forum
-	WHERE slug = $1;`
+	getForumBySlug              = "getForumBySlug"
+	createForum                 = "createForum"
+	getForumIdAndSlugBySlug     = "getForumIdAndSlugBySlug"
+	updateForumThreads          = "updateForumThreads"
+	updateForumPosts            = "updateForumPosts"
+	getForumSlugBySlug          = "getForumSlugBySlug"
+	getForumUsers               = "getForumUsers"
+	getForumUsersLimit          = "getForumUsersLimit"
+	getForumUsersLimitDesc      = "getForumUsersLimitDesc"
+	getForumUsersLimitSince     = "getForumUsersLimitSince"
+	getForumUsersLimitSinceDesc = "getForumUsersLimitSinceDesc"
+)
 
-	createForum = `INSERT INTO forum (slug, title, user_id, user_nickname) 
+var forumQueries = map[string]string{
+	getForumBySlug: `SELECT slug, title, posts, threads, user_nickname
+	FROM forum
+	WHERE slug = $1;`,
+
+	createForum: `INSERT INTO forum (slug, title, user_id, user_nickname) 
 	VALUES ($1, $2, $3, $4)
-	RETURNING slug, title, posts, threads, user_nickname;`
+	RETURNING slug, title, posts, threads, user_nickname;`,
 
-	getForumIdAndSlugBySlug = `SELECT id, slug
+	getForumIdAndSlugBySlug: `SELECT id, slug
 	FROM forum
-	WHERE slug = $1;`
+	WHERE slug = $1;`,
 
-	updateForumThreads = `UPDATE forum
+	updateForumThreads: `UPDATE forum
 	SET threads = threads + 1
-	WHERE id = $1`
+	WHERE id = $1`,
 
-	updateForumPosts = `UPDATE forum
+	updateForumPosts: `UPDATE forum
 	SET posts = posts + $1
-	WHERE slug = $2;`
+	WHERE slug = $2;`,
 
-	getForumSlugBySlug = `SELECT slug
+	getForumSlugBySlug: `SELECT slug
 	FROM forum
-	WHERE slug = $1;`
+	WHERE slug = $1;`,
 
-	getForumUsers = `SELECT c.nickname
+	getForumUsers: `SELECT c.nickname
 	FROM (SELECT user_nickname AS nickname
 					FROM thread
 					WHERE forum_slug = $1
@@ -43,9 +57,9 @@ const (
 					FROM post
 					WHERE forum_slug = $1
 					GROUP BY user_nickname) AS u
-	JOIN client AS c ON (c.nickname = u.nickname)`
+	JOIN client AS c ON (c.nickname = u.nickname)`,
 
-	getForumUsersLimit = `SELECT c.nickname
+	getForumUsersLimit: `SELECT c.nickname
 	FROM (SELECT user_nickname AS nickname
 					FROM thread
 					WHERE forum_slug = $1
@@ -57,9 +71,9 @@ const (
 					GROUP BY user_nickname) AS u
 	JOIN client AS c ON (c.nickname = u.nickname)
 	ORDER BY c.nickname
-	LIMIT $2`
+	LIMIT $2`,
 
-	getForumUsersLimitDesc = `SELECT c.nickname
+	getForumUsersLimitDesc: `SELECT c.nickname
 	FROM (SELECT user_nickname AS nickname
 					FROM thread
 					WHERE forum_slug = $1
@@ -71,9 +85,9 @@ const (
 					GROUP BY user_nickname) AS u
 	JOIN client AS c ON (c.nickname = u.nickname)
 	ORDER BY c.nickname DESC
-	LIMIT $2`
+	LIMIT $2`,
 
-	getForumUsersLimitSince = `SELECT c.nickname
+	getForumUsersLimitSince: `SELECT c.nickname
 	FROM (SELECT user_nickname AS nickname
 					FROM thread
 					WHERE forum_slug = $1
@@ -86,9 +100,9 @@ const (
 	JOIN client AS c ON (c.nickname = u.nickname)
 	WHERE c.nickname > $3
 	ORDER BY c.nickname
-	LIMIT $2;`
+	LIMIT $2;`,
 
-	getForumUsersLimitSinceDesc = `SELECT c.nickname
+	getForumUsersLimitSinceDesc: `SELECT c.nickname
 	FROM (SELECT user_nickname AS nickname
 					FROM thread
 					WHERE forum_slug = $1
@@ -101,8 +115,8 @@ const (
 	JOIN client AS c ON (c.nickname = u.nickname)
 	WHERE c.nickname < $3
 	ORDER BY c.nickname DESC
-	LIMIT $2;`
-)
+	LIMIT $2;`,
+}
 
 func NewForumRepo(conn *pgx.ConnPool) *Forum {
 	return &Forum{

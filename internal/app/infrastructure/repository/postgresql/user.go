@@ -8,28 +8,36 @@ import (
 )
 
 const (
-	getUserByNickname = `SELECT email, nickname, fullname, about 
-	FROM client WHERE nickname = $1;`
+	getUserByNickname              = "getUserByNickname"
+	updateUser                     = "updateUser"
+	getUsersWithEmailAndNickname   = "getUsersWithEmailAndNickname"
+	createUser                     = "createUser"
+	getUserIdAndNicknameByNickname = "getUserIdAndNicknameByNickname"
+)
 
-	updateUser = `UPDATE client 
+var userQueries = map[string]string{
+	getUserByNickname: `SELECT email, nickname, fullname, about 
+	FROM client WHERE nickname = $1;`,
+
+	updateUser: `UPDATE client 
 	SET email = COALESCE($1, email),
 		fullname = COALESCE($2, fullname),
 		about = COALESCE($3, about)
 	WHERE nickname = $4 
-	RETURNING email, nickname, fullname, about;`
+	RETURNING email, nickname, fullname, about;`,
 
-	getUsersWithEmailAndNickname = `SELECT email, nickname, fullname, about 
+	getUsersWithEmailAndNickname: `SELECT email, nickname, fullname, about 
 	FROM client 
-	WHERE email = $1 OR nickname = $2;`
+	WHERE email = $1 OR nickname = $2;`,
 
-	createUser = `INSERT INTO client (email, nickname, fullname, about)
+	createUser: `INSERT INTO client (email, nickname, fullname, about)
 	VALUES ($1, $2, $3, $4)
-	RETURNING email, nickname, fullname, about;`
+	RETURNING email, nickname, fullname, about;`,
 
-	getUserIdAndNicknameByNickname = `SELECT id, nickname
+	getUserIdAndNicknameByNickname: `SELECT id, nickname
 	FROM client
-	WHERE nickname = $1;`
-)
+	WHERE nickname = $1;`,
+}
 
 func NewUserRepo(conn *pgx.ConnPool) *User {
 	return &User{

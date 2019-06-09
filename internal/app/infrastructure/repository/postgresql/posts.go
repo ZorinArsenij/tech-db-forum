@@ -13,92 +13,120 @@ import (
 )
 
 const (
-	getPostByIdAndThread = `SELECT parents, root
-	FROM post
-	WHERE id = $1 AND thread_id = $2`
+	getPostByIdAndThread             = "getPostByIdAndThread"
+	getPostById                      = "getPostById"
+	createPost                       = "createPost"
+	createPostRoot                   = "createPostRoot"
+	updatePost                       = "updatePost"
+	getPostsFlat                     = "getPostsFlat"
+	getPostsFlatLimit                = "getPostsFlatLimit"
+	getPostsFlatLimitDesc            = "getPostsFlatLimitDesc"
+	getPostsFlatLimitSince           = "getPostsFlatLimitSince"
+	getPostsFlatLimitSinceDesc       = "getPostsFlatLimitSinceDesc"
+	getPostsTree                     = "getPostsTree"
+	getPostsTreeLimit                = "getPostsTreeLimit"
+	getPostsTreeLimitDesc            = "getPostsTreeLimitDesc"
+	getPostsTreeLimitSince           = "getPostsTreeLimitSince"
+	getPostsTreeLimitSinceDesc       = "getPostsTreeLimitSinceDesc"
+	getPostPath                      = "getPostPath"
+	getPostRoot                      = "getPostRoot"
+	getPostsParentTreeLimit          = "getPostsParentTreeLimit"
+	getPostsParentTreeLimitDesc      = "getPostsParentTreeLimitDesc"
+	getPostsParentTreeLimitSince     = "getPostsParentTreeLimitSince"
+	getPostsParentTreeLimitSinceDesc = "getPostsParentTreeLimitSinceDesc"
+	getPostsLimit                    = "getPostsLimit"
+	getPostsLimitDesc                = "getPostsLimitDesc"
+	getPostsLimitSince               = "getPostsLimitSince"
+	getPostsLimitSinceDesc           = "getPostsLimitSinceDesc"
+)
 
-	getPostById = `SELECT id, message, created, is_edited, user_nickname, thread_id, forum_slug, parent
+var postQueries = map[string]string{
+	getPostByIdAndThread: `SELECT parents, root
 	FROM post
-	WHERE id = $1;`
+	WHERE id = $1 AND thread_id = $2`,
 
-	createPost = `INSERT INTO post (message, created, user_id, user_nickname, thread_id, forum_slug, parent, parents, root)
+	getPostById: `SELECT id, message, created, is_edited, user_nickname, thread_id, forum_slug, parent
+	FROM post
+	WHERE id = $1;`,
+
+	createPost: `INSERT INTO post (message, created, user_id, user_nickname, thread_id, forum_slug, parent, parents, root)
 	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-	RETURNING id, message, created, is_edited, user_nickname, thread_id, forum_slug, parent`
+	RETURNING id, message, created, is_edited, user_nickname, thread_id, forum_slug, parent`,
 
-	createPostRoot = `INSERT INTO post (message, created, user_id, user_nickname, thread_id, forum_slug, parent, parents, root)
+	createPostRoot: `INSERT INTO post (message, created, user_id, user_nickname, thread_id, forum_slug, parent, parents, root)
 	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, (SELECT CURRVAL('post_id_seq')))
-	RETURNING id, message, created, is_edited, user_nickname, thread_id, forum_slug, parent`
+	RETURNING id, message, created, is_edited, user_nickname, thread_id, forum_slug, parent`,
 
-	updatePost = `UPDATE post
+	updatePost: `UPDATE post
 	SET message = COALESCE($1, message),
 	is_edited = TRUE
-	WHERE id = $2;`
+	WHERE id = $2;`,
 
-	getPostsFlat = `SELECT id, message, created, is_edited, user_nickname, thread_id, forum_slug, parent
+	getPostsFlat: `SELECT id, message, created, is_edited, user_nickname, thread_id, forum_slug, parent
 	FROM post
-	WHERE thread_id = $1`
+	WHERE thread_id = $1`,
 
-	getPostsFlatLimit = `SELECT id, message, created, is_edited, user_nickname, thread_id, forum_slug, parent
+	getPostsFlatLimit: `SELECT id, message, created, is_edited, user_nickname, thread_id, forum_slug, parent
 	FROM post
 	WHERE thread_id = $1
 	ORDER BY id, created
-	LIMIT $2;`
+	LIMIT $2;`,
 
-	getPostsFlatLimitDesc = `SELECT id, message, created, is_edited, user_nickname, thread_id, forum_slug, parent
+	getPostsFlatLimitDesc: `SELECT id, message, created, is_edited, user_nickname, thread_id, forum_slug, parent
 	FROM post
 	WHERE thread_id = $1
 	ORDER BY id DESC, created
-	LIMIT $2;`
+	LIMIT $2;`,
 
-	getPostsFlatLimitSince = `SELECT id, message, created, is_edited, user_nickname, thread_id, forum_slug, parent
+	getPostsFlatLimitSince: `SELECT id, message, created, is_edited, user_nickname, thread_id, forum_slug, parent
 	FROM post
 	WHERE thread_id = $1  AND id > $3
 	ORDER BY id, created
-	LIMIT $2;`
+	LIMIT $2;`,
 
-	getPostsFlatLimitSinceDesc = `SELECT id, message, created, is_edited, user_nickname, thread_id, forum_slug, parent
+	getPostsFlatLimitSinceDesc: `SELECT id, message, created, is_edited, user_nickname, thread_id, forum_slug, parent
 	FROM post
 	WHERE thread_id = $1  AND id < $3
 	ORDER BY id DESC, created
-	LIMIT $2;`
+	LIMIT $2;`,
 
-	getPostsTree = `SELECT id, message, created, is_edited, user_nickname, thread_id, forum_slug, parent
+	getPostsTree: `SELECT id, message, created, is_edited, user_nickname, thread_id, forum_slug, parent
 	FROM post
-	WHERE thread_id = $1`
+	WHERE thread_id = $1`,
 
-	getPostsTreeLimit = `SELECT id, message, created, is_edited, user_nickname, thread_id, forum_slug, parent
+	getPostsTreeLimit: `SELECT id, message, created, is_edited, user_nickname, thread_id, forum_slug, parent
 	FROM post
 	WHERE thread_id = $1
 	ORDER BY array_append(parents, id)
-	LIMIT $2;`
+	LIMIT $2;`,
 
-	getPostsTreeLimitDesc = `SELECT id, message, created, is_edited, user_nickname, thread_id, forum_slug, parent
+	getPostsTreeLimitDesc: `SELECT id, message, created, is_edited, user_nickname, thread_id, forum_slug, parent
 	FROM post
 	WHERE thread_id = $1
 	ORDER BY array_append(parents, id) DESC
-	LIMIT $2;`
+	LIMIT $2;`,
 
-	getPostsTreeLimitSince = `SELECT id, message, created, is_edited, user_nickname, thread_id, forum_slug, parent
+	getPostsTreeLimitSince: `SELECT id, message, created, is_edited, user_nickname, thread_id, forum_slug, parent
 	FROM post
 	WHERE thread_id = $1 AND array_append(parents, id) > $3
 	ORDER BY array_append(parents, id)
-	LIMIT $2;`
+	LIMIT $2;`,
 
-	getPostsTreeLimitSinceDesc = `SELECT id, message, created, is_edited, user_nickname, thread_id, forum_slug, parent
+	getPostsTreeLimitSinceDesc: `SELECT id, message, created, is_edited, user_nickname, thread_id, forum_slug, parent
 	FROM post
 	WHERE thread_id = $1 AND array_append(parents, id) < $3
 	ORDER BY array_append(parents, id) DESC
-	LIMIT $2;`
+	LIMIT $2;`,
 
-	getPostPath = `SELECT array_append(parents, id) AS path
+	getPostPath: `SELECT array_append(parents, id) AS path
 	FROM post
-	WHERE id = $1;`
+	WHERE id = $1;`,
 
-	getPostRoot = `SELECT root::TEXT
+	getPostRoot: `SELECT root::TEXT
 	FROM post
-	WHERE id = $1;`
+	WHERE id = $1;`,
 
-	getPostsParentTreeLimit = `SELECT p.id, message, created, is_edited, user_nickname, thread_id, forum_slug, parent
+	getPostsParentTreeLimit: `SELECT p.id, message, created, is_edited, user_nickname, thread_id, forum_slug, parent
 	FROM post AS p
   	JOIN (
       SELECT id
@@ -108,9 +136,9 @@ const (
       ORDER BY id
       LIMIT $2
 	) AS s ON (p.root = s.id)
-	ORDER BY root, array_append(p.parents, p.id)`
+	ORDER BY root, array_append(p.parents, p.id)`,
 
-	getPostsParentTreeLimitDesc = `SELECT p.id, message, created, is_edited, user_nickname, thread_id, forum_slug, parent
+	getPostsParentTreeLimitDesc: `SELECT p.id, message, created, is_edited, user_nickname, thread_id, forum_slug, parent
 	FROM post AS p
   	JOIN (
       SELECT id
@@ -120,9 +148,9 @@ const (
       ORDER BY id DESC
       LIMIT $2
 	) AS s ON (p.root = s.id)
-	ORDER BY root DESC, array_append(p.parents, p.id)`
+	ORDER BY root DESC, array_append(p.parents, p.id)`,
 
-	getPostsParentTreeLimitSince = `SELECT p.id, message, created, is_edited, user_nickname, thread_id, forum_slug, parent
+	getPostsParentTreeLimitSince: `SELECT p.id, message, created, is_edited, user_nickname, thread_id, forum_slug, parent
 	FROM post AS p
   	JOIN (
       SELECT id
@@ -133,9 +161,9 @@ const (
       ORDER BY id
       LIMIT $2
 	) AS s ON (p.root = s.id)
-	ORDER BY root, array_append(p.parents, p.id)`
+	ORDER BY root, array_append(p.parents, p.id)`,
 
-	getPostsParentTreeLimitSinceDesc = `SELECT p.id, message, created, is_edited, user_nickname, thread_id, forum_slug, parent
+	getPostsParentTreeLimitSinceDesc: `SELECT p.id, message, created, is_edited, user_nickname, thread_id, forum_slug, parent
 	FROM post AS p
   	JOIN (
       SELECT id
@@ -146,32 +174,32 @@ const (
       ORDER BY id DESC
       LIMIT $2
 	) AS s ON (p.root = s.id)
-	ORDER BY root DESC, array_append(p.parents, p.id)`
+	ORDER BY root DESC, array_append(p.parents, p.id)`,
 
-	getPostsLimit = `SELECT id, message, created, is_edited, user_nickname, thread_id, forum_slug, parent
+	getPostsLimit: `SELECT id, message, created, is_edited, user_nickname, thread_id, forum_slug, parent
 	FROM post
 	WHERE thread_id = $1
 	ORDER BY id
-	LIMIT $2`
+	LIMIT $2`,
 
-	getPostsLimitDesc = `SELECT id, message, created, is_edited, user_nickname, thread_id, forum_slug, parent
+	getPostsLimitDesc: `SELECT id, message, created, is_edited, user_nickname, thread_id, forum_slug, parent
 	FROM post
 	WHERE thread_id = $1
 	ORDER BY id DESC
-	LIMIT $2`
+	LIMIT $2`,
 
-	getPostsLimitSince = `SELECT id, message, created, is_edited, user_nickname, thread_id, forum_slug, parent
+	getPostsLimitSince: `SELECT id, message, created, is_edited, user_nickname, thread_id, forum_slug, parent
 	FROM post
 	WHERE thread_id = $1 AND id > $3
 	ORDER BY id
-	LIMIT $2`
+	LIMIT $2`,
 
-	getPostsLimitSinceDesc = `SELECT id, message, created, is_edited, user_nickname, thread_id, forum_slug, parent
+	getPostsLimitSinceDesc: `SELECT id, message, created, is_edited, user_nickname, thread_id, forum_slug, parent
 	FROM post
 	WHERE thread_id = $1 AND id < $3
 	ORDER BY id DESC
-	LIMIT $2`
-)
+	LIMIT $2`,
+}
 
 func NewPostRepo(conn *pgx.ConnPool) *Post {
 	return &Post{

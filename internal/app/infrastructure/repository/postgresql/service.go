@@ -6,10 +6,21 @@ import (
 )
 
 const (
-	getNumberOfRows = `SELECT COUNT(*) FROM`
-
-	clearTables = `TRUNCATE forum, thread, client, post, vote;`
+	getNumberOfRows       = "getNumberOfRows"
+	clearTables           = "clearTables"
+	getPostNumberOfRows   = "getPostNumberOfRows"
+	getForumNumberOfRows  = "getForumNumberOfRows"
+	getThreadNumberOfRows = "getThreadNumberOfRows"
+	getUserNumberOfRows   = "getUserNumberOfRows"
 )
+
+var serviceQueries = map[string]string{
+	getPostNumberOfRows:   `SELECT COUNT(*) FROM post`,
+	getForumNumberOfRows:  `SELECT COUNT(*) FROM forum`,
+	getThreadNumberOfRows: `SELECT COUNT(*) FROM thread`,
+	getUserNumberOfRows:   `SELECT COUNT(*) FROM client`,
+	clearTables:           `TRUNCATE forum, thread, client, post, vote`,
+}
 
 func NewServiceRepo(conn *pgx.ConnPool) *Service {
 	return &Service{
@@ -23,10 +34,10 @@ type Service struct {
 
 func (s *Service) GetStatus() (*service.Status, error) {
 	var status service.Status
-	_ = s.conn.QueryRow(getNumberOfRows + " post;").Scan(&status.Post)
-	_ = s.conn.QueryRow(getNumberOfRows + " forum;").Scan(&status.Forum)
-	_ = s.conn.QueryRow(getNumberOfRows + " thread;").Scan(&status.Thread)
-	_ = s.conn.QueryRow(getNumberOfRows + " client;").Scan(&status.User)
+	_ = s.conn.QueryRow(getPostNumberOfRows).Scan(&status.Post)
+	_ = s.conn.QueryRow(getForumNumberOfRows).Scan(&status.Forum)
+	_ = s.conn.QueryRow(getThreadNumberOfRows).Scan(&status.Thread)
+	_ = s.conn.QueryRow(getUserNumberOfRows).Scan(&status.User)
 	return &status, nil
 }
 

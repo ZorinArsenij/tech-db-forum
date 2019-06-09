@@ -36,6 +36,9 @@ func main() {
 		log.Fatal("database connection refused2")
 	}
 
+	// Create prepared statements
+	postgresql.PrepareStatements(conn)
+
 	userInteractor := usecase.NewUserInteractor(postgresql.NewUserRepo(conn))
 	forumInteractor := usecase.NewForumInteractor(postgresql.NewForumRepo(conn))
 	threadInteractor := usecase.NewThreadInteractor(postgresql.NewThreadRepo(conn))
