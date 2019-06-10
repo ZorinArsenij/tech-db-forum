@@ -81,12 +81,6 @@ CREATE TABLE post (
 CREATE INDEX post_id_thread_index
   ON post(id, thread_id);
 
-CREATE INDEX post_id_covering_index
-  ON post(id, message, created, is_edited, user_nickname, thread_id, forum_slug, parent);
-
-CREATE INDEX post_thread_covering_index
-  ON post(thread_id, id, message, created, is_edited, user_nickname, forum_slug, parent);
-
 CREATE INDEX post_tree_index
   ON post(thread_id, array_append(parents, id));
 
