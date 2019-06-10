@@ -50,8 +50,9 @@ func (v *Vote) CreateVote(data *vote.Vote, slugOrId string) (*thread.Thread, err
 		return nil, err
 	}
 
+	var slug *string
 	if err := tx.QueryRow(checkThreadByIdOrSlug, slugOrId).
-		Scan(&threadID, &slugOrId); err != nil {
+		Scan(&threadID, &slug); err != nil {
 		return nil, err
 	}
 
