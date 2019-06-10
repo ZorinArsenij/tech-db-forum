@@ -177,7 +177,7 @@ func (f *Forum) GetForumUsers(slug string, limit *int, since *string, orderDesc 
 		return nil, err
 	}
 
-	users := make(user.Users, 0, 0)
+	users := make(user.Users, 0)
 	var err error
 	var rows *pgx.Rows
 

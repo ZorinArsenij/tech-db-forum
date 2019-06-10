@@ -6,7 +6,6 @@ import (
 )
 
 const (
-	getNumberOfRows       = "getNumberOfRows"
 	clearTables           = "clearTables"
 	getPostNumberOfRows   = "getPostNumberOfRows"
 	getForumNumberOfRows  = "getForumNumberOfRows"

@@ -233,6 +233,5 @@ func GetPosts(interactor *usecase.PostInteractor) fasthttp.RequestHandler {
 		}
 
 		ctx.SetStatusCode(fasthttp.StatusOK)
-		return
 	}
 }

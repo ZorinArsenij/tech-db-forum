@@ -443,7 +443,7 @@ func (p *Post) GetPostsFlat(slugOrId string, limit *int, since *string, orderDes
 		return nil, err
 	}
 
-	posts := make(post.Posts, 0, 0)
+	posts := make(post.Posts, 0)
 	var err error
 	var rows *pgx.Rows
 
@@ -481,12 +481,12 @@ func (p *Post) GetPostsTree(slugOrId string, limit *int, since *string, orderDes
 		return nil, err
 	}
 
-	posts := make(post.Posts, 0, 0)
+	posts := make(post.Posts, 0)
 	var err error
 	var rows *pgx.Rows
 
 	if since != nil {
-		parents := make([]int32, 0, 0)
+		parents := make([]int32, 0)
 		_ = p.conn.QueryRow(getPostPath, since).Scan(&parents)
 		if orderDesc {
 			rows, err = p.conn.Query(getPostsTreeLimitSinceDesc, threadID, limit, parents)
@@ -521,7 +521,7 @@ func (p *Post) GetPostsParentTree(slugOrId string, limit *int, since *string, or
 		return nil, err
 	}
 
-	posts := make(post.Posts, 0, 0)
+	posts := make(post.Posts, 0)
 	var err error
 	var rows *pgx.Rows
 
@@ -560,7 +560,7 @@ func (p *Post) GetPosts(slugOrId string, limit *int, since *string, orderDesc bo
 		return nil, err
 	}
 
-	posts := make(post.Posts, 0, 0)
+	posts := make(post.Posts, 0)
 	var err error
 	var rows *pgx.Rows
 

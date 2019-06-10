@@ -17,7 +17,6 @@ func GetStatus(interactor *usecase.ServiceInteractor) fasthttp.RequestHandler {
 		}
 
 		ctx.SetStatusCode(fasthttp.StatusOK)
-		return
 	}
 }
 
@@ -31,6 +30,5 @@ func Clear(interactor *usecase.ServiceInteractor) fasthttp.RequestHandler {
 		}
 
 		ctx.SetStatusCode(fasthttp.StatusOK)
-		return
 	}
 }

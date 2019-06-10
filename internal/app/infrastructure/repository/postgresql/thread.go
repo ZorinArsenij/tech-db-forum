@@ -145,7 +145,7 @@ func (t *Thread) GetThreads(slug string, limit *int, since *string, orderDesc bo
 		return nil, err
 	}
 
-	threads := make(thread.Threads, 0, 0)
+	threads := make(thread.Threads, 0)
 	var err error
 	var rows *pgx.Rows
 
