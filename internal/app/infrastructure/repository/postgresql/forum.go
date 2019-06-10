@@ -37,7 +37,7 @@ var forumQueries = map[string]string{
 
 	updateForumThreads: `UPDATE forum
 	SET threads = threads + 1
-	WHERE id = $1`,
+	WHERE id = $1;`,
 
 	updateForumPosts: `UPDATE forum
 	SET posts = posts + $1
@@ -57,7 +57,7 @@ var forumQueries = map[string]string{
 					FROM post
 					WHERE forum_slug = $1
 					GROUP BY user_nickname) AS u
-	JOIN client AS c ON (c.nickname = u.nickname)`,
+	JOIN client AS c ON (c.nickname = u.nickname);`,
 
 	getForumUsersLimit: `SELECT c.nickname
 	FROM (SELECT user_nickname AS nickname
@@ -71,7 +71,7 @@ var forumQueries = map[string]string{
 					GROUP BY user_nickname) AS u
 	JOIN client AS c ON (c.nickname = u.nickname)
 	ORDER BY c.nickname
-	LIMIT $2`,
+	LIMIT $2;`,
 
 	getForumUsersLimitDesc: `SELECT c.nickname
 	FROM (SELECT user_nickname AS nickname
@@ -85,7 +85,7 @@ var forumQueries = map[string]string{
 					GROUP BY user_nickname) AS u
 	JOIN client AS c ON (c.nickname = u.nickname)
 	ORDER BY c.nickname DESC
-	LIMIT $2`,
+	LIMIT $2;`,
 
 	getForumUsersLimitSince: `SELECT c.nickname
 	FROM (SELECT user_nickname AS nickname
