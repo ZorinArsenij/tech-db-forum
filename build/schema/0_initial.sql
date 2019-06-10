@@ -10,9 +10,6 @@ CREATE TABLE client (
   about TEXT NOT NULL DEFAULT ''
 );
 
-CREATE INDEX client_covering_index
-  ON client(nickname, email, fullname, about);
-
 CREATE INDEX client_email_index
   ON client(email);
 
@@ -31,9 +28,6 @@ CREATE TABLE forum (
 
 CREATE INDEX forum_slug_index
   ON forum(slug);
-
-CREATE INDEX forum_covering_index
-  ON forum(slug, title, posts, threads, user_nickname);
 
 CREATE TABLE thread (
   id SERIAL PRIMARY KEY,
@@ -60,10 +54,6 @@ CREATE INDEX thread_created_index
 CREATE INDEX thread_created_desc_index
   ON thread(forum_slug, created DESC);
 
--- ???
-CREATE INDEX thread_covering_index
-  ON thread(id, slug, title, message, forum_slug, user_nickname, created, votes);
-
 CREATE TABLE post (
   id SERIAL PRIMARY KEY,
   message TEXT NOT NULL,
@@ -84,20 +74,20 @@ CREATE INDEX post_id_thread_index
 CREATE INDEX post_tree_index
   ON post(thread_id, array_append(parents, id));
 
-CREATE INDEX post_tree_desc_index
-  ON post(thread_id, array_append(parents, id) DESC);
+-- CREATE INDEX post_tree_desc_index
+--   ON post(thread_id, array_append(parents, id) DESC);
 
 CREATE INDEX post_parent_tree_index
   ON post(thread_id, id) WHERE parent = 0;
 
-CREATE INDEX post_parent_tree_desc_index
-  ON post(thread_id, id DESC) WHERE parent = 0;
+-- CREATE INDEX post_parent_tree_desc_index
+--   ON post(thread_id, id DESC) WHERE parent = 0;
 
 CREATE INDEX post_thread_index
   ON post(thread_id, id);
 
-CREATE INDEX post_thread_desc_index
-  ON post(thread_id, id DESC);
+-- CREATE INDEX post_thread_desc_index
+--   ON post(thread_id, id DESC);
 
 
 CREATE TABLE vote (
