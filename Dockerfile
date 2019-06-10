@@ -18,8 +18,13 @@ RUN /etc/init.d/postgresql start &&\
     /etc/init.d/postgresql stop
 
 RUN echo "host all  all    0.0.0.0/0  md5" >> /etc/postgresql/$PGVER/main/pg_hba.conf
-
 RUN echo "listen_addresses='*'" >> /etc/postgresql/$PGVER/main/postgresql.conf
+RUN echo "fsync = 'off'" >> /etc/postgresql/$PGVER/main/postgresql.conf
+RUN echo "shared_buffers = 256MB" >> /etc/postgresql/$PGVER/main/postgresql.conf
+RUN echo "effective_cache_size = 768MB" >> /etc/postgresql/$PGVER/main/postgresql.conf
+RUN echo "work_mem = 16MB" >> /etc/postgresql/$PGVER/main/postgresql.conf
+RUN echo "synchronous_commit = 'off'" >> /etc/postgresql/$PGVER/main/postgresql.conf
+RUN echo "logging_collector = 'off'" >> /etc/postgresql/$PGVER/main/postgresql.conf
 
 EXPOSE 5432
 
