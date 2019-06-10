@@ -32,9 +32,11 @@ type Posts []Post
 
 //easyjson:json
 type Create struct {
-	Message      string `json:"message"`
-	UserNickname string `json:"author"`
-	Parent       int32  `json:"parent"`
+	Message      string  `json:"message"`
+	UserNickname string  `json:"author"`
+	Parent       int32   `json:"parent"`
+	Parents      []int32 `json:"-"`
+	Root         int     `json:"-"`
 }
 
 //easyjson:json

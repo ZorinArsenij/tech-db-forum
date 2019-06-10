@@ -1,7 +1,12 @@
 package postgresql
 
 import (
+	"context"
 	"errors"
+	"github.com/emirpasic/gods/sets/treeset"
+	"github.com/emirpasic/gods/utils"
+	"log"
+	"strings"
 	"time"
 
 	"github.com/ZorinArsenij/tech-db-forum/internal/app/domain/forum"
@@ -284,44 +289,82 @@ func (p *Post) CreatePosts(data *post.PostsCreate, slugOrId string) (*post.Posts
 	}
 	defer tx.Rollback()
 
+	batch := tx.BeginBatch()
+
 	var threadID, userID uint64
 	var forumSlug string
 
 	createTime := time.Now()
-	posts := make(post.Posts, 0, 0)
 
 	if err := tx.QueryRow(getThreadShortBySlugOrId, slugOrId).Scan(&threadID, &forumSlug); err != nil {
 		return nil, err
 	}
 
-	for _, newPost := range *data {
-		if err := tx.QueryRow(getUserIdAndNicknameByNickname, newPost.UserNickname).Scan(&userID, &newPost.UserNickname); err != nil {
+	postParentsCheckList := make([]int, 0, len(*data))
+	userNicknamesCheckSet := treeset.NewWith(utils.StringComparator)
+	for i, newPost := range *data {
+		userNicknamesCheckSet.Add(newPost.UserNickname)
+		if newPost.Parent != 0 {
+			postParentsCheckList = append(postParentsCheckList, i)
+			batch.Queue(getPostByIdAndThread, []interface{}{newPost.Parent, threadID}, nil, nil)
+		}
+	}
+
+	userNicknamesList := userNicknamesCheckSet.Values()
+	for _, nickname := range userNicknamesList {
+		batch.Queue(getUserIdAndNicknameByNickname, []interface{}{nickname}, nil, nil)
+	}
+
+	if err := batch.Send(context.Background(), nil); err != nil {
+		batch.Close()
+		log.Fatal(err)
+	}
+
+	for _, index := range postParentsCheckList {
+		if err := batch.QueryRowResults().Scan(&(*data)[index].Parents, &(*data)[index].Root); err != nil {
+			batch.Close()
+			return nil, errors.New("postParentDoesNotExist")
+		}
+		(*data)[index].Parents = append((*data)[index].Parents, (*data)[index].Parent)
+	}
+
+	users := make(map[string]user.Info, len(userNicknamesList))
+	for _, nickname := range userNicknamesList {
+		info := user.Info{}
+		if err := batch.QueryRowResults().Scan(&info.ID, &info.Nickname); err != nil {
+			batch.Close()
 			return nil, err
 		}
+		users[strings.ToLower(nickname.(string))] = info
+	}
 
-		parents := make([]int32, 0, 0)
-		var root int
+	batch = tx.BeginBatch()
+	defer batch.Close()
 
-		if newPost.Parent != 0 {
-			parents = make([]int32, 0, 0)
-			if err := tx.QueryRow(getPostByIdAndThread, newPost.Parent, threadID).Scan(&parents, &root); err != nil {
-				return nil, errors.New("postParentDoesNotExist")
-			}
-
-			parents = append(parents, newPost.Parent)
-		}
-
-		var created post.Post
+	for _, newPost := range *data {
+		userID = users[strings.ToLower(newPost.UserNickname)].ID
 		if newPost.Parent == 0 {
-			if err := tx.QueryRow(createPostRoot, newPost.Message, createTime, userID, newPost.UserNickname, threadID, forumSlug, newPost.Parent, parents).Scan(&created.ID, &created.Message, &created.Created, &created.IsEdited, &created.UserNickname, &created.ThreadID, &created.ForumSlug, &created.Parent); err != nil {
-				return nil, err
-			}
+			batch.Queue(createPostRoot,
+				[]interface{}{newPost.Message, createTime, userID, newPost.UserNickname, threadID, forumSlug, newPost.Parent, []int32{}},
+				nil, nil)
 		} else {
-			if err := tx.QueryRow(createPost, newPost.Message, createTime, userID, newPost.UserNickname, threadID, forumSlug, newPost.Parent, parents, root).Scan(&created.ID, &created.Message, &created.Created, &created.IsEdited, &created.UserNickname, &created.ThreadID, &created.ForumSlug, &created.Parent); err != nil {
-				return nil, err
-			}
+			batch.Queue(createPost,
+				[]interface{}{newPost.Message, createTime, userID, newPost.UserNickname, threadID, forumSlug, newPost.Parent, newPost.Parents, newPost.Root},
+				nil, nil)
 		}
+	}
 
+	if err := batch.Send(context.Background(), nil); err != nil {
+		log.Fatal(err)
+	}
+
+	posts := make(post.Posts, 0, len(*data))
+	for range *data {
+		var created post.Post
+		if err := batch.QueryRowResults().
+			Scan(&created.ID, &created.Message, &created.Created, &created.IsEdited, &created.UserNickname, &created.ThreadID, &created.ForumSlug, &created.Parent); err != nil {
+			return nil, err
+		}
 		posts = append(posts, created)
 	}
 
@@ -332,6 +375,66 @@ func (p *Post) CreatePosts(data *post.PostsCreate, slugOrId string) (*post.Posts
 	tx.Commit()
 	return &posts, nil
 }
+
+//func (p *Post) CreatePosts(data *post.PostsCreate, slugOrId string) (*post.Posts, error) {
+//	if len(*data) == 0 {
+//		return nil, nil
+//	}
+//
+//	tx, err := p.conn.Begin()
+//	if err != nil {
+//		return nil, err
+//	}
+//	defer tx.Rollback()
+//
+//	var threadID, userID uint64
+//	var forumSlug string
+//
+//	createTime := time.Now()
+//	posts := make(post.Posts, 0, 0)
+//
+//	if err := tx.QueryRow(getThreadShortBySlugOrId, slugOrId).Scan(&threadID, &forumSlug); err != nil {
+//		return nil, err
+//	}
+//
+//	for _, newPost := range *data {
+//		if err := tx.QueryRow(getUserIdAndNicknameByNickname, newPost.UserNickname).Scan(&userID, &newPost.UserNickname); err != nil {
+//			return nil, err
+//		}
+//
+//		parents := make([]int32, 0, 0)
+//		var root int
+//
+//		if newPost.Parent != 0 {
+//			parents = make([]int32, 0, 0)
+//			if err := tx.QueryRow(getPostByIdAndThread, newPost.Parent, threadID).Scan(&parents, &root); err != nil {
+//				return nil, errors.New("postParentDoesNotExist")
+//			}
+//
+//			parents = append(parents, newPost.Parent)
+//		}
+//
+//		var created post.Post
+//		if newPost.Parent == 0 {
+//			if err := tx.QueryRow(createPostRoot, newPost.Message, createTime, userID, newPost.UserNickname, threadID, forumSlug, newPost.Parent, parents).Scan(&created.ID, &created.Message, &created.Created, &created.IsEdited, &created.UserNickname, &created.ThreadID, &created.ForumSlug, &created.Parent); err != nil {
+//				return nil, err
+//			}
+//		} else {
+//			if err := tx.QueryRow(createPost, newPost.Message, createTime, userID, newPost.UserNickname, threadID, forumSlug, newPost.Parent, parents, root).Scan(&created.ID, &created.Message, &created.Created, &created.IsEdited, &created.UserNickname, &created.ThreadID, &created.ForumSlug, &created.Parent); err != nil {
+//				return nil, err
+//			}
+//		}
+//
+//		posts = append(posts, created)
+//	}
+//
+//	if _, err := tx.Exec(updateForumPosts, len(*data), forumSlug); err != nil {
+//		return nil, err
+//	}
+//
+//	tx.Commit()
+//	return &posts, nil
+//}
 
 func (p *Post) GetPostsFlat(slugOrId string, limit *int, since *string, orderDesc bool) (*post.Posts, error) {
 	var threadID uint64

@@ -17,5 +17,10 @@ type Update struct {
 	About    *string `json:"about"`
 }
 
+type Info struct {
+	ID       uint64
+	Nickname string
+}
+
 //easyjson:json
 type Users []User

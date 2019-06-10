@@ -5,6 +5,7 @@ go 1.12
 require (
 	github.com/buaazp/fasthttprouter v0.1.1
 	github.com/cockroachdb/apd v1.1.0 // indirect
+	github.com/emirpasic/gods v1.12.0
 	github.com/jackc/fake v0.0.0-20150926172116-812a484cc733 // indirect
 	github.com/jackc/pgx v3.3.0+incompatible
 	github.com/kr/pretty v0.1.0 // indirect

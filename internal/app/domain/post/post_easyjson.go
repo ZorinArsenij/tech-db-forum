@@ -4,8 +4,6 @@ package post
 
 import (
 	json "encoding/json"
-	time "time"
-
 	forum "github.com/ZorinArsenij/tech-db-forum/internal/app/domain/forum"
 	thread "github.com/ZorinArsenij/tech-db-forum/internal/app/domain/thread"
 	user "github.com/ZorinArsenij/tech-db-forum/internal/app/domain/user"
@@ -421,7 +419,7 @@ func easyjson5a72dc82DecodeGithubComZorinArsenijTechDbForumInternalAppDomainPost
 				if out.Author == nil {
 					out.Author = new(user.User)
 				}
-				easyjson5a72dc82DecodeGithubComZorinArsenijTechDbForumInternalAppDomainUser(in, out.Author)
+				(*out.Author).UnmarshalEasyJSON(in)
 			}
 		case "forum":
 			if in.IsNull() {
@@ -443,7 +441,7 @@ func easyjson5a72dc82DecodeGithubComZorinArsenijTechDbForumInternalAppDomainPost
 				if out.Thread == nil {
 					out.Thread = new(thread.Thread)
 				}
-				easyjson5a72dc82DecodeGithubComZorinArsenijTechDbForumInternalAppDomainThread(in, out.Thread)
+				(*out.Thread).UnmarshalEasyJSON(in)
 			}
 		default:
 			in.SkipRecursive()
@@ -470,7 +468,7 @@ func easyjson5a72dc82EncodeGithubComZorinArsenijTechDbForumInternalAppDomainPost
 		if in.Author == nil {
 			out.RawString("null")
 		} else {
-			easyjson5a72dc82EncodeGithubComZorinArsenijTechDbForumInternalAppDomainUser(out, *in.Author)
+			(*in.Author).MarshalEasyJSON(out)
 		}
 	}
 	{
@@ -508,7 +506,7 @@ func easyjson5a72dc82EncodeGithubComZorinArsenijTechDbForumInternalAppDomainPost
 		if in.Thread == nil {
 			out.RawString("null")
 		} else {
-			easyjson5a72dc82EncodeGithubComZorinArsenijTechDbForumInternalAppDomainThread(out, *in.Thread)
+			(*in.Thread).MarshalEasyJSON(out)
 		}
 	}
 	out.RawByte('}')
@@ -536,238 +534,6 @@ func (v *Info) UnmarshalJSON(data []byte) error {
 // UnmarshalEasyJSON supports easyjson.Unmarshaler interface
 func (v *Info) UnmarshalEasyJSON(l *jlexer.Lexer) {
 	easyjson5a72dc82DecodeGithubComZorinArsenijTechDbForumInternalAppDomainPost4(l, v)
-}
-func easyjson5a72dc82DecodeGithubComZorinArsenijTechDbForumInternalAppDomainThread(in *jlexer.Lexer, out *thread.Thread) {
-	isTopLevel := in.IsStart()
-	if in.IsNull() {
-		if isTopLevel {
-			in.Consumed()
-		}
-		in.Skip()
-		return
-	}
-	in.Delim('{')
-	for !in.IsDelim('}') {
-		key := in.UnsafeString()
-		in.WantColon()
-		if in.IsNull() {
-			in.Skip()
-			in.WantComma()
-			continue
-		}
-		switch key {
-		case "id":
-			out.ID = uint64(in.Uint64())
-		case "votes":
-			out.Votes = int(in.Int())
-		case "title":
-			out.Title = string(in.String())
-		case "slug":
-			if in.IsNull() {
-				in.Skip()
-				out.Slug = nil
-			} else {
-				if out.Slug == nil {
-					out.Slug = new(string)
-				}
-				*out.Slug = string(in.String())
-			}
-		case "message":
-			out.Message = string(in.String())
-		case "created":
-			if in.IsNull() {
-				in.Skip()
-				out.Created = nil
-			} else {
-				if out.Created == nil {
-					out.Created = new(time.Time)
-				}
-				if data := in.Raw(); in.Ok() {
-					in.AddError((*out.Created).UnmarshalJSON(data))
-				}
-			}
-		case "author":
-			out.UserNickname = string(in.String())
-		case "forum":
-			out.ForumSlug = string(in.String())
-		default:
-			in.SkipRecursive()
-		}
-		in.WantComma()
-	}
-	in.Delim('}')
-	if isTopLevel {
-		in.Consumed()
-	}
-}
-func easyjson5a72dc82EncodeGithubComZorinArsenijTechDbForumInternalAppDomainThread(out *jwriter.Writer, in thread.Thread) {
-	out.RawByte('{')
-	first := true
-	_ = first
-	{
-		const prefix string = ",\"id\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Uint64(uint64(in.ID))
-	}
-	{
-		const prefix string = ",\"votes\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Int(int(in.Votes))
-	}
-	{
-		const prefix string = ",\"title\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.String(string(in.Title))
-	}
-	if in.Slug != nil {
-		const prefix string = ",\"slug\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.String(string(*in.Slug))
-	}
-	{
-		const prefix string = ",\"message\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.String(string(in.Message))
-	}
-	if in.Created != nil {
-		const prefix string = ",\"created\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.Raw((*in.Created).MarshalJSON())
-	}
-	{
-		const prefix string = ",\"author\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.String(string(in.UserNickname))
-	}
-	{
-		const prefix string = ",\"forum\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.String(string(in.ForumSlug))
-	}
-	out.RawByte('}')
-}
-func easyjson5a72dc82DecodeGithubComZorinArsenijTechDbForumInternalAppDomainUser(in *jlexer.Lexer, out *user.User) {
-	isTopLevel := in.IsStart()
-	if in.IsNull() {
-		if isTopLevel {
-			in.Consumed()
-		}
-		in.Skip()
-		return
-	}
-	in.Delim('{')
-	for !in.IsDelim('}') {
-		key := in.UnsafeString()
-		in.WantColon()
-		if in.IsNull() {
-			in.Skip()
-			in.WantComma()
-			continue
-		}
-		switch key {
-		case "email":
-			out.Email = string(in.String())
-		case "nickname":
-			out.Nickname = string(in.String())
-		case "fullname":
-			out.Fullname = string(in.String())
-		case "about":
-			out.About = string(in.String())
-		default:
-			in.SkipRecursive()
-		}
-		in.WantComma()
-	}
-	in.Delim('}')
-	if isTopLevel {
-		in.Consumed()
-	}
-}
-func easyjson5a72dc82EncodeGithubComZorinArsenijTechDbForumInternalAppDomainUser(out *jwriter.Writer, in user.User) {
-	out.RawByte('{')
-	first := true
-	_ = first
-	{
-		const prefix string = ",\"email\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.String(string(in.Email))
-	}
-	{
-		const prefix string = ",\"nickname\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.String(string(in.Nickname))
-	}
-	{
-		const prefix string = ",\"fullname\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.String(string(in.Fullname))
-	}
-	{
-		const prefix string = ",\"about\":"
-		if first {
-			first = false
-			out.RawString(prefix[1:])
-		} else {
-			out.RawString(prefix)
-		}
-		out.String(string(in.About))
-	}
-	out.RawByte('}')
 }
 func easyjson5a72dc82DecodeGithubComZorinArsenijTechDbForumInternalAppDomainPost5(in *jlexer.Lexer, out *Create) {
 	isTopLevel := in.IsStart()
