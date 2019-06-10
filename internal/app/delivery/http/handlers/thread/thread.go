@@ -1,8 +1,6 @@
 package thread
 
 import (
-	"fmt"
-
 	"github.com/ZorinArsenij/tech-db-forum/internal/app/domain/message"
 	"github.com/ZorinArsenij/tech-db-forum/internal/app/domain/thread"
 	"github.com/ZorinArsenij/tech-db-forum/internal/app/usecase"
@@ -93,7 +91,6 @@ func GetThreads(interactor *usecase.ThreadInteractor) fasthttp.RequestHandler {
 			}
 		default:
 			{
-				fmt.Println(err)
 				ctx.SetStatusCode(fasthttp.StatusInternalServerError)
 				return
 			}
