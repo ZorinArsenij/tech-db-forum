@@ -27,7 +27,7 @@ func main() {
 		log.Fatal("database connection refused1")
 	}
 	if err := migrations.MakeMigrations(conn, "build/schema/0_initial.sql"); err != nil {
-		log.Fatal("make migrations failed")
+		log.Fatal("make migrations failed:", err)
 	}
 	conn.Close()
 
