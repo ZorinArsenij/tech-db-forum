@@ -1,8 +1,8 @@
 CREATE EXTENSION IF NOT EXISTS CITEXT;
 
-DROP TABLE IF EXISTS forum, thread, client, post, vote;
+-- DROP TABLE IF EXISTS client, forum, thread, post, vote, forum_client;
 
-CREATE TABLE client (
+CREATE TABLE IF NOT EXISTS client (
   id SERIAL PRIMARY KEY,
   email CITEXT NOT NULL UNIQUE,
   nickname CITEXT NOT NULL UNIQUE,
@@ -10,13 +10,13 @@ CREATE TABLE client (
   about TEXT NOT NULL DEFAULT ''
 );
 
-CREATE INDEX client_email_index
+CREATE INDEX IF NOT EXISTS client_email_index
   ON client(email);
 
-CREATE INDEX client_nickname_index
+CREATE INDEX IF NOT EXISTS client_nickname_index
   ON client(nickname);
 
-CREATE TABLE forum (
+CREATE TABLE IF NOT EXISTS forum (
   id SERIAL PRIMARY KEY,
   slug CITEXT NOT NULL UNIQUE,
   title TEXT NOT NULL,
@@ -26,10 +26,10 @@ CREATE TABLE forum (
   user_nickname CITEXT NOT NULL
 );
 
-CREATE INDEX forum_slug_index
+CREATE INDEX IF NOT EXISTS forum_slug_index
   ON forum(slug);
 
-CREATE TABLE thread (
+CREATE TABLE IF NOT EXISTS thread (
   id SERIAL PRIMARY KEY,
   slug CITEXT DEFAULT NULL,
   title TEXT NOT NULL,
@@ -42,19 +42,19 @@ CREATE TABLE thread (
   votes INTEGER NOT NULL DEFAULT 0
 );
 
-CREATE INDEX thread_slug_index
+CREATE INDEX IF NOT EXISTS thread_slug_index
   ON thread(slug);
 
-CREATE INDEX thread_func_id_index
+CREATE INDEX IF NOT EXISTS thread_func_id_index
   ON thread(text(id));
 
-CREATE INDEX thread_created_index
+CREATE INDEX IF NOT EXISTS thread_created_index
   ON thread(forum_slug, created);
 
-CREATE INDEX thread_created_desc_index
+CREATE INDEX IF NOT EXISTS thread_created_desc_index
   ON thread(forum_slug, created DESC);
 
-CREATE TABLE post (
+CREATE TABLE IF NOT EXISTS post (
   id SERIAL PRIMARY KEY,
   message TEXT NOT NULL,
   created TIMESTAMPTZ,
@@ -68,31 +68,47 @@ CREATE TABLE post (
   root INT NOT NULL
 );
 
-CREATE INDEX post_id_thread_index
+CREATE INDEX IF NOT EXISTS post_id_thread_index
   ON post(id, thread_id);
 
-CREATE INDEX post_tree_index
+CREATE INDEX IF NOT EXISTS post_tree_index
   ON post(thread_id, array_append(parents, id));
 
 -- CREATE INDEX post_tree_desc_index
 --   ON post(thread_id, array_append(parents, id) DESC);
 
-CREATE INDEX post_parent_tree_index
+CREATE INDEX IF NOT EXISTS post_parent_tree_index
   ON post(thread_id, id) WHERE parent = 0;
 
 -- CREATE INDEX post_parent_tree_desc_index
 --   ON post(thread_id, id DESC) WHERE parent = 0;
 
-CREATE INDEX post_thread_index
+CREATE INDEX IF NOT EXISTS post_thread_index
   ON post(thread_id, id);
+
+CREATE INDEX IF NOT EXISTS post_root_parents_func_index
+  ON post(root, array_append(parents, id));
 
 -- CREATE INDEX post_thread_desc_index
 --   ON post(thread_id, id DESC);
 
-
-CREATE TABLE vote (
+CREATE TABLE IF NOT EXISTS vote (
   id SERIAL PRIMARY KEY,
   voice BOOLEAN,
   user_id INTEGER NOT NULL REFERENCES client(id),
   thread_id INTEGER NOT NULL REFERENCES thread(id)
 );
+
+CREATE TABLE IF NOT EXISTS forum_client (
+  forum_slug CITEXT NOT NULL,
+  email CITEXT NOT NULL,
+  nickname CITEXT NOT NULL,
+  fullname TEXT NOT NULL,
+  about TEXT NOT NULL DEFAULT ''
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS forum_client_index
+  ON forum_client (forum_slug, nickname);
+
+CREATE INDEX IF NOT EXISTS forum_users_covering_index
+  ON forum_client (forum_slug, nickname, email, fullname, about);
