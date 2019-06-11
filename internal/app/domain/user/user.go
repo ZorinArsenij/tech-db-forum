@@ -18,8 +18,8 @@ type Update struct {
 }
 
 type Info struct {
-	ID       uint64
-	Nickname string
+	ID uint64
+	User
 }
 
 //easyjson:json

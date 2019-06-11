@@ -9,14 +9,19 @@ import (
 
 const (
 	getUserByNickname              = "getUserByNickname"
+	getUserInfoByNickname          = "getUserInfoByNickname"
 	updateUser                     = "updateUser"
 	getUsersWithEmailAndNickname   = "getUsersWithEmailAndNickname"
 	createUser                     = "createUser"
 	getUserIdAndNicknameByNickname = "getUserIdAndNicknameByNickname"
+	createForumUser                = "createForumUser"
 )
 
 var userQueries = map[string]string{
 	getUserByNickname: `SELECT email, nickname, fullname, about 
+	FROM client WHERE nickname = $1;`,
+
+	getUserInfoByNickname: `SELECT id, email, nickname, fullname, about 
 	FROM client WHERE nickname = $1;`,
 
 	updateUser: `UPDATE client 
@@ -37,6 +42,10 @@ var userQueries = map[string]string{
 	getUserIdAndNicknameByNickname: `SELECT id, nickname
 	FROM client
 	WHERE nickname = $1;`,
+
+	createForumUser: `INSERT INTO forum_client(forum_slug, email, nickname, fullname, about)
+	VALUES ($1, $2, $3, $4, $5)
+	ON CONFLICT DO NOTHING;`,
 }
 
 func NewUserRepo(conn *pgx.ConnPool) *User {

@@ -47,74 +47,103 @@ var forumQueries = map[string]string{
 	FROM forum
 	WHERE slug = $1;`,
 
-	getForumUsers: `SELECT c.nickname
-	FROM (SELECT user_nickname AS nickname
-					FROM thread
-					WHERE forum_slug = $1
-					GROUP BY user_nickname
-					UNION
-					SELECT user_nickname AS nickname
-					FROM post
-					WHERE forum_slug = $1
-					GROUP BY user_nickname) AS u
-	JOIN client AS c ON (c.nickname = u.nickname);`,
+	//getForumUsers: `SELECT c.nickname
+	//FROM (SELECT user_nickname AS nickname
+	//				FROM thread
+	//				WHERE forum_slug = $1
+	//				GROUP BY user_nickname
+	//				UNION
+	//				SELECT user_nickname AS nickname
+	//				FROM post
+	//				WHERE forum_slug = $1
+	//				GROUP BY user_nickname) AS u
+	//JOIN client AS c ON (c.nickname = u.nickname);`,
 
-	getForumUsersLimit: `SELECT c.nickname
-	FROM (SELECT user_nickname AS nickname
-					FROM thread
-					WHERE forum_slug = $1
-					GROUP BY user_nickname
-					UNION
-					SELECT user_nickname AS nickname
-					FROM post
-					WHERE forum_slug = $1
-					GROUP BY user_nickname) AS u
-	JOIN client AS c ON (c.nickname = u.nickname)
-	ORDER BY c.nickname
+	getForumUsers: `SELECT email, nickname, fullname, about
+	FROM forum_client
+	WHERE forum_slug = $1
+	ORDER BY nickname;`,
+
+	//getForumUsersLimit: `SELECT c.nickname
+	//	//FROM (SELECT user_nickname AS nickname
+	//	//				FROM thread
+	//	//				WHERE forum_slug = $1
+	//	//				GROUP BY user_nickname
+	//	//				UNION
+	//	//				SELECT user_nickname AS nickname
+	//	//				FROM post
+	//	//				WHERE forum_slug = $1
+	//	//				GROUP BY user_nickname) AS u
+	//	//JOIN client AS c ON (c.nickname = u.nickname)
+	//	//ORDER BY c.nickname
+	//	//LIMIT $2;`,
+
+	getForumUsersLimit: `SELECT email, nickname, fullname, about
+	FROM forum_client
+	WHERE forum_slug = $1
+	ORDER BY nickname
 	LIMIT $2;`,
 
-	getForumUsersLimitDesc: `SELECT c.nickname
-	FROM (SELECT user_nickname AS nickname
-					FROM thread
-					WHERE forum_slug = $1
-					GROUP BY user_nickname
-					UNION
-					SELECT user_nickname AS nickname
-					FROM post
-					WHERE forum_slug = $1
-					GROUP BY user_nickname) AS u
-	JOIN client AS c ON (c.nickname = u.nickname)
-	ORDER BY c.nickname DESC
+	//getForumUsersLimitDesc: `SELECT c.nickname
+	//FROM (SELECT user_nickname AS nickname
+	//				FROM thread
+	//				WHERE forum_slug = $1
+	//				GROUP BY user_nickname
+	//				UNION
+	//				SELECT user_nickname AS nickname
+	//				FROM post
+	//				WHERE forum_slug = $1
+	//				GROUP BY user_nickname) AS u
+	//JOIN client AS c ON (c.nickname = u.nickname)
+	//ORDER BY c.nickname DESC
+	//LIMIT $2;`,
+
+	getForumUsersLimitDesc: `SELECT email, nickname, fullname, about
+	FROM forum_client
+	WHERE forum_slug = $1
+	ORDER BY nickname DESC
 	LIMIT $2;`,
 
-	getForumUsersLimitSince: `SELECT c.nickname
-	FROM (SELECT user_nickname AS nickname
-					FROM thread
-					WHERE forum_slug = $1
-					GROUP BY user_nickname
-					UNION
-					SELECT user_nickname AS nickname
-					FROM post
-					WHERE forum_slug = $1
-					GROUP BY user_nickname) AS u
-	JOIN client AS c ON (c.nickname = u.nickname)
-	WHERE c.nickname > $3
-	ORDER BY c.nickname
+	//getForumUsersLimitSince: `SELECT c.nickname
+	//FROM (SELECT user_nickname AS nickname
+	//				FROM thread
+	//				WHERE forum_slug = $1
+	//				GROUP BY user_nickname
+	//				UNION
+	//				SELECT user_nickname AS nickname
+	//				FROM post
+	//				WHERE forum_slug = $1
+	//				GROUP BY user_nickname) AS u
+	//JOIN client AS c ON (c.nickname = u.nickname)
+	//WHERE c.nickname > $3
+	//ORDER BY c.nickname
+	//LIMIT $2;`,
+
+	getForumUsersLimitSince: `SELECT email, nickname, fullname, about
+	FROM forum_client
+	WHERE forum_slug = $1 AND nickname > $3
+	ORDER BY nickname
 	LIMIT $2;`,
 
-	getForumUsersLimitSinceDesc: `SELECT c.nickname
-	FROM (SELECT user_nickname AS nickname
-					FROM thread
-					WHERE forum_slug = $1
-					GROUP BY user_nickname
-					UNION
-					SELECT user_nickname AS nickname
-					FROM post
-					WHERE forum_slug = $1
-					GROUP BY user_nickname) AS u
-	JOIN client AS c ON (c.nickname = u.nickname)
-	WHERE c.nickname < $3
-	ORDER BY c.nickname DESC
+	//getForumUsersLimitSinceDesc: `SELECT c.nickname
+	//FROM (SELECT user_nickname AS nickname
+	//				FROM thread
+	//				WHERE forum_slug = $1
+	//				GROUP BY user_nickname
+	//				UNION
+	//				SELECT user_nickname AS nickname
+	//				FROM post
+	//				WHERE forum_slug = $1
+	//				GROUP BY user_nickname) AS u
+	//JOIN client AS c ON (c.nickname = u.nickname)
+	//WHERE c.nickname < $3
+	//ORDER BY c.nickname DESC
+	//LIMIT $2;`,
+
+	getForumUsersLimitSinceDesc: `SELECT email, nickname, fullname, about
+	FROM forum_client
+	WHERE forum_slug = $1 AND nickname < $3
+	ORDER BY nickname DESC
 	LIMIT $2;`,
 }
 
@@ -201,14 +230,7 @@ func (f *Forum) GetForumUsers(slug string, limit *int, since *string, orderDesc 
 
 	for rows.Next() {
 		var received user.User
-		var nickname string
-
-		rows.Scan(&nickname)
-		if err := f.conn.QueryRow(getUserByNickname, nickname).
-			Scan(&received.Email, &received.Nickname, &received.Fullname, &received.About); err != nil {
-			return nil, err
-		}
-
+		rows.Scan(&received.Email, &received.Nickname, &received.Fullname, &received.About)
 		users = append(users, received)
 	}
 

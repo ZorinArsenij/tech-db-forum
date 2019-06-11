@@ -297,6 +297,7 @@ func (p *Post) CreatePosts(data *post.PostsCreate, slugOrId string) (*post.Posts
 	createTime := time.Now()
 
 	if err := tx.QueryRow(getThreadShortBySlugOrId, slugOrId).Scan(&threadID, &forumSlug); err != nil {
+		batch.Close()
 		return nil, err
 	}
 
@@ -312,7 +313,7 @@ func (p *Post) CreatePosts(data *post.PostsCreate, slugOrId string) (*post.Posts
 
 	userNicknamesList := userNicknamesCheckSet.Values()
 	for _, nickname := range userNicknamesList {
-		batch.Queue(getUserIdAndNicknameByNickname, []interface{}{nickname}, nil, nil)
+		batch.Queue(getUserInfoByNickname, []interface{}{nickname}, nil, nil)
 	}
 
 	if err := batch.Send(context.Background(), nil); err != nil {
@@ -331,7 +332,7 @@ func (p *Post) CreatePosts(data *post.PostsCreate, slugOrId string) (*post.Posts
 	users := make(map[string]user.Info, len(userNicknamesList))
 	for _, nickname := range userNicknamesList {
 		info := user.Info{}
-		if err := batch.QueryRowResults().Scan(&info.ID, &info.Nickname); err != nil {
+		if err := batch.QueryRowResults().Scan(&info.ID, &info.Email, &info.Nickname, &info.Fullname, &info.About); err != nil {
 			batch.Close()
 			return nil, err
 		}
@@ -339,7 +340,6 @@ func (p *Post) CreatePosts(data *post.PostsCreate, slugOrId string) (*post.Posts
 	}
 
 	batch = tx.BeginBatch()
-	defer batch.Close()
 
 	for _, newPost := range *data {
 		userID = users[strings.ToLower(newPost.UserNickname)].ID
@@ -355,6 +355,7 @@ func (p *Post) CreatePosts(data *post.PostsCreate, slugOrId string) (*post.Posts
 	}
 
 	if err := batch.Send(context.Background(), nil); err != nil {
+		batch.Close()
 		log.Fatal(err)
 	}
 
@@ -363,9 +364,28 @@ func (p *Post) CreatePosts(data *post.PostsCreate, slugOrId string) (*post.Posts
 		var created post.Post
 		if err := batch.QueryRowResults().
 			Scan(&created.ID, &created.Message, &created.Created, &created.IsEdited, &created.UserNickname, &created.ThreadID, &created.ForumSlug, &created.Parent); err != nil {
+			batch.Close()
 			return nil, err
 		}
 		posts = append(posts, created)
+	}
+
+	batch = tx.BeginBatch()
+	defer batch.Close()
+
+	for _, info := range users {
+		batch.Queue(createForumUser,
+			[]interface{}{forumSlug, info.Email, info.Nickname, info.Fullname, info.About}, nil, nil)
+	}
+
+	if err := batch.Send(context.Background(), nil); err != nil {
+		log.Fatal(err)
+	}
+
+	for range users {
+		if _, err := batch.ExecResults(); err != nil {
+			return nil, err
+		}
 	}
 
 	if _, err := tx.Exec(updateForumPosts, len(*data), forumSlug); err != nil {

@@ -2,6 +2,7 @@ package postgresql
 
 import (
 	"errors"
+	"github.com/ZorinArsenij/tech-db-forum/internal/app/domain/user"
 
 	"github.com/ZorinArsenij/tech-db-forum/internal/app/domain/thread"
 
@@ -112,7 +113,8 @@ func (t *Thread) CreateThread(data *thread.Create) (*thread.Thread, error) {
 
 	var userID, forumID uint64
 
-	if err := tx.QueryRow(getUserIdAndNicknameByNickname, data.UserNickname).Scan(&userID, &data.UserNickname); err != nil {
+	userInfo := &user.User{}
+	if err := tx.QueryRow(getUserInfoByNickname, data.UserNickname).Scan(&userID, &userInfo.Email, &userInfo.Nickname, &userInfo.Fullname, &userInfo.About); err != nil {
 		return nil, err
 	}
 
@@ -129,6 +131,10 @@ func (t *Thread) CreateThread(data *thread.Create) (*thread.Thread, error) {
 	}
 
 	if err := tx.QueryRow(createThread, data.Slug, data.Title, data.Message, forumID, data.ForumSlug, userID, data.UserNickname, data.Created).Scan(&received.ID, &received.Slug, &received.Title, &received.Message, &received.ForumSlug, &received.UserNickname, &received.Created, &received.Votes); err != nil {
+		return nil, err
+	}
+
+	if _, err := tx.Exec(createForumUser, data.ForumSlug, userInfo.Email, userInfo.Nickname, userInfo.Fullname, userInfo.About); err != nil {
 		return nil, err
 	}
 
