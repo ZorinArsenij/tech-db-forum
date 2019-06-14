@@ -339,6 +339,7 @@ func (p *Post) CreatePosts(data *post.PostsCreate, slugOrId string) (*post.Posts
 		users[strings.ToLower(nickname.(string))] = info
 	}
 
+	batch.Close()
 	batch = tx.BeginBatch()
 
 	for _, newPost := range *data {
@@ -370,6 +371,7 @@ func (p *Post) CreatePosts(data *post.PostsCreate, slugOrId string) (*post.Posts
 		posts = append(posts, created)
 	}
 
+	batch.Close()
 	batch = tx.BeginBatch()
 	defer batch.Close()
 
