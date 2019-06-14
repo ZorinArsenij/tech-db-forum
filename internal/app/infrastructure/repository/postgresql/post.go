@@ -282,68 +282,70 @@ func (p *Post) UpdatePost(data *post.Update) (*post.Post, error) {
 	return &received, nil
 }
 
-func (p *Post) CreatePosts(data *post.PostsCreate, slugOrId string) (*post.Posts, error) {
-	tx, err := p.conn.Begin()
-	if err != nil {
-		return nil, err
-	}
-	defer tx.Rollback()
-
+func getUsersBatch(tx *pgx.Tx, data *post.PostsCreate) (*map[string]user.Info, error) {
 	batch := tx.BeginBatch()
+	defer batch.Close()
 
-	var threadID, userID uint64
-	var forumSlug string
+	nicknamesSet := treeset.NewWith(utils.StringComparator)
+	for _, newPost := range *data {
+		nicknamesSet.Add(newPost.UserNickname)
+	}
 
-	createTime := time.Now()
+	nicknames := nicknamesSet.Values()
+	for _, nickname := range nicknames {
+		batch.Queue(getUserInfoByNickname, []interface{}{nickname}, nil, nil)
+	}
 
-	if err := tx.QueryRow(getThreadShortBySlugOrId, slugOrId).Scan(&threadID, &forumSlug); err != nil {
-		batch.Close()
+	if err := batch.Send(context.Background(), nil); err != nil {
 		return nil, err
 	}
+
+	users := make(map[string]user.Info, len(nicknames))
+	for _, nickname := range nicknames {
+		info := user.Info{}
+		if err := batch.QueryRowResults().Scan(&info.ID, &info.Email, &info.Nickname, &info.Fullname, &info.About); err != nil {
+			return nil, err
+		}
+		users[strings.ToLower(nickname.(string))] = info
+	}
+
+	return &users, nil
+}
+
+func getPostParentsBatch(tx *pgx.Tx, data *post.PostsCreate, threadID uint64) error {
+	batch := tx.BeginBatch()
+	defer batch.Close()
 
 	postParentsCheckList := make([]int, 0, len(*data))
-	userNicknamesCheckSet := treeset.NewWith(utils.StringComparator)
 	for i, newPost := range *data {
-		userNicknamesCheckSet.Add(newPost.UserNickname)
 		if newPost.Parent != 0 {
 			postParentsCheckList = append(postParentsCheckList, i)
 			batch.Queue(getPostByIdAndThread, []interface{}{newPost.Parent, threadID}, nil, nil)
 		}
 	}
 
-	userNicknamesList := userNicknamesCheckSet.Values()
-	for _, nickname := range userNicknamesList {
-		batch.Queue(getUserInfoByNickname, []interface{}{nickname}, nil, nil)
-	}
-
 	if err := batch.Send(context.Background(), nil); err != nil {
-		batch.Close()
-		log.Fatal(err)
+		return err
 	}
 
 	for _, index := range postParentsCheckList {
 		if err := batch.QueryRowResults().Scan(&(*data)[index].Parents, &(*data)[index].Root); err != nil {
-			batch.Close()
-			return nil, errors.New("postParentDoesNotExist")
+			return errors.New("postParentDoesNotExist")
 		}
 		(*data)[index].Parents = append((*data)[index].Parents, (*data)[index].Parent)
 	}
 
-	users := make(map[string]user.Info, len(userNicknamesList))
-	for _, nickname := range userNicknamesList {
-		info := user.Info{}
-		if err := batch.QueryRowResults().Scan(&info.ID, &info.Email, &info.Nickname, &info.Fullname, &info.About); err != nil {
-			batch.Close()
-			return nil, err
-		}
-		users[strings.ToLower(nickname.(string))] = info
-	}
+	return nil
+}
 
-	batch.Close()
-	batch = tx.BeginBatch()
+func createPostsBatch(tx *pgx.Tx, data *post.PostsCreate, threadID uint64, forumSlug string, users *map[string]user.Info) (*post.Posts, error) {
+	batch := tx.BeginBatch()
+	defer batch.Close()
+
+	createTime := time.Now()
 
 	for _, newPost := range *data {
-		userID = users[strings.ToLower(newPost.UserNickname)].ID
+		userID := (*users)[strings.ToLower(newPost.UserNickname)].ID
 		if newPost.Parent == 0 {
 			batch.Queue(createPostRoot,
 				[]interface{}{newPost.Message, createTime, userID, newPost.UserNickname, threadID, forumSlug, newPost.Parent, []int32{}},
@@ -356,8 +358,7 @@ func (p *Post) CreatePosts(data *post.PostsCreate, slugOrId string) (*post.Posts
 	}
 
 	if err := batch.Send(context.Background(), nil); err != nil {
-		batch.Close()
-		log.Fatal(err)
+		return nil, err
 	}
 
 	posts := make(post.Posts, 0, len(*data))
@@ -365,37 +366,81 @@ func (p *Post) CreatePosts(data *post.PostsCreate, slugOrId string) (*post.Posts
 		var created post.Post
 		if err := batch.QueryRowResults().
 			Scan(&created.ID, &created.Message, &created.Created, &created.IsEdited, &created.UserNickname, &created.ThreadID, &created.ForumSlug, &created.Parent); err != nil {
-			batch.Close()
 			return nil, err
 		}
 		posts = append(posts, created)
 	}
 
-	batch.Close()
-	batch = tx.BeginBatch()
+	return &posts, nil
+}
+
+func createForumUsersBatch(tx *pgx.Tx, forumSlug string, users *map[string]user.Info) error {
+	batch := tx.BeginBatch()
 	defer batch.Close()
 
-	for _, info := range users {
+	for _, info := range *users {
 		batch.Queue(createForumUser,
 			[]interface{}{forumSlug, info.Email, info.Nickname, info.Fullname, info.About}, nil, nil)
 	}
 
 	if err := batch.Send(context.Background(), nil); err != nil {
-		log.Fatal(err)
+		return err
 	}
 
-	for range users {
+	for range *users {
 		if _, err := batch.ExecResults(); err != nil {
-			return nil, err
+			return err
 		}
 	}
 
+	return nil
+}
+
+func (p *Post) CreatePosts(data *post.PostsCreate, slugOrId string) (*post.Posts, error) {
+	tx, err := p.conn.Begin()
+	if err != nil {
+		log.Println("Failed creating transaction. Error:", err)
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	var threadID uint64
+	var forumSlug string
+
+	if err := tx.QueryRow(getThreadShortBySlugOrId, slugOrId).Scan(&threadID, &forumSlug); err != nil {
+		log.Println("Failed get threadId by forum slug or id. Error:", err)
+		return nil, err
+	}
+
+	users, err := getUsersBatch(tx, data)
+	if err != nil {
+		log.Println("Failed getting users using batch. Error:", err)
+		return nil, err
+	}
+
+	if err := getPostParentsBatch(tx, data, threadID); err != nil {
+		log.Println("Failed getting posts parents. Error:", err)
+		return nil, err
+	}
+
+	posts, err := createPostsBatch(tx, data, threadID, forumSlug, users)
+	if err != nil {
+		log.Println("Failed creating posts. Error:", err)
+		return nil, err
+	}
+
+	if err := createForumUsersBatch(tx, forumSlug, users); err != nil {
+		log.Println("Failed creating forum users. Error:", err)
+		return nil, err
+	}
+
 	if _, err := tx.Exec(updateForumPosts, len(*data), forumSlug); err != nil {
+		log.Println("Failed updating forum posts. Error:", err)
 		return nil, err
 	}
 
 	tx.Commit()
-	return &posts, nil
+	return posts, nil
 }
 
 //func (p *Post) CreatePosts(data *post.PostsCreate, slugOrId string) (*post.Posts, error) {
