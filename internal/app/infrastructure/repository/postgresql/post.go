@@ -374,8 +374,8 @@ func createPostsBatch(tx *pgx.Tx, data *post.PostsCreate, threadID uint64, forum
 	return &posts, nil
 }
 
-func createForumUsersBatch(tx *pgx.Tx, forumSlug string, users *map[string]user.Info) error {
-	batch := tx.BeginBatch()
+func createForumUsersBatch(conn *pgx.ConnPool, forumSlug string, users *map[string]user.Info) error {
+	batch := conn.BeginBatch()
 	defer batch.Close()
 
 	for _, info := range *users {
@@ -429,17 +429,17 @@ func (p *Post) CreatePosts(data *post.PostsCreate, slugOrId string) (*post.Posts
 		return nil, err
 	}
 
-	if err := createForumUsersBatch(tx, forumSlug, users); err != nil {
-		log.Println("Failed creating forum users. Error:", err)
-		return nil, err
-	}
-
 	if _, err := tx.Exec(updateForumPosts, len(*data), forumSlug); err != nil {
 		log.Println("Failed updating forum posts. Error:", err)
 		return nil, err
 	}
-
 	tx.Commit()
+
+	if err := createForumUsersBatch(p.conn, forumSlug, users); err != nil {
+		log.Println("Failed creating forum users. Error:", err)
+		return nil, err
+	}
+
 	return posts, nil
 }
 
