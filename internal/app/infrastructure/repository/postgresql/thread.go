@@ -113,7 +113,7 @@ func (t *Thread) CreateThread(data *thread.Create) (*thread.Thread, error) {
 	var forumID uint64
 
 	userInfo := &user.User{}
-	if err := tx.QueryRow(getUserByNickname, data.UserNickname).Scan(&userInfo.Nickname, &userInfo.Email, &userInfo.Fullname, &userInfo.About); err != nil {
+	if err := tx.QueryRow(getUserInfoByNickname, data.UserNickname).Scan(&userInfo.Nickname, &userInfo.Email, &userInfo.Fullname, &userInfo.About); err != nil {
 		return nil, err
 	}
 

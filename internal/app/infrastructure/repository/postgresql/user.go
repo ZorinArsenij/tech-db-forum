@@ -7,16 +7,16 @@ import (
 )
 
 const (
-	getUserByNickname              = "getUserByNickname"
-	updateUser                     = "updateUser"
-	getUsersWithEmailAndNickname   = "getUsersWithEmailAndNickname"
-	createUser                     = "createUser"
-	getUserIdAndNicknameByNickname = "getUserIdAndNicknameByNickname"
-	createForumUser                = "createForumUser"
+	getUserInfoByNickname        = "getUserInfoByNickname"
+	updateUser                   = "updateUser"
+	getUsersWithEmailAndNickname = "getUsersWithEmailAndNickname"
+	createUser                   = "createUser"
+	getUserByNickname            = "getUserByNickname"
+	createForumUser              = "createForumUser"
 )
 
 var userQueries = map[string]string{
-	getUserByNickname: `SELECT nickname, email, fullname, about 
+	getUserInfoByNickname: `SELECT nickname, email, fullname, about 
 	FROM client WHERE nickname = $1;`,
 
 	updateUser: `UPDATE client 
@@ -34,7 +34,7 @@ var userQueries = map[string]string{
 	VALUES ($1, $2, $3, $4)
 	RETURNING nickname, email, fullname, about;`,
 
-	getUserIdAndNicknameByNickname: `SELECT nickname
+	getUserByNickname: `SELECT nickname
 	FROM client
 	WHERE nickname = $1;`,
 
@@ -55,7 +55,7 @@ type User struct {
 
 func (u *User) GetUserByNickname(nickname string) (*user.User, error) {
 	received := &user.User{}
-	if err := u.conn.QueryRow(getUserByNickname, nickname).Scan(&received.Nickname, &received.Email, &received.Fullname, &received.About); err != nil {
+	if err := u.conn.QueryRow(getUserInfoByNickname, nickname).Scan(&received.Nickname, &received.Email, &received.Fullname, &received.About); err != nil {
 		return nil, err
 	}
 

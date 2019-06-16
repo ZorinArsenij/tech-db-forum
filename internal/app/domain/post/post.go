@@ -55,9 +55,3 @@ type Update struct {
 	ID      string  `json:"-"`
 	Message *string `json:"message"`
 }
-
-//type PostsQuery struct {
-//	SlugOrId string
-//	Limit *int
-//	Since *string
-//	OrderDesc bool

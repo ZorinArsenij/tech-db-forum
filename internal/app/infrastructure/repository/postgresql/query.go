@@ -1,11 +1,11 @@
-package cluster
+package postgresql
 
 import (
 	"github.com/jackc/pgx"
 	"io/ioutil"
 )
 
-func CreateClusters(conn *pgx.ConnPool, path string) error {
+func ExecFromFile(conn *pgx.ConnPool, path string) error {
 	tx, err := conn.Begin()
 	if err != nil {
 		return err
@@ -22,10 +22,6 @@ func CreateClusters(conn *pgx.ConnPool, path string) error {
 	}
 
 	if err = tx.Commit(); err != nil {
-		return err
-	}
-
-	if _, err := conn.Exec("VACUUM ANALYZE;"); err != nil {
 		return err
 	}
 

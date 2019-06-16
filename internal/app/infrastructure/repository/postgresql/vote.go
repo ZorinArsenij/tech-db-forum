@@ -45,7 +45,7 @@ func (v *Vote) CreateVote(data *vote.Vote, slugOrId string) (*thread.Thread, err
 	var threadID, voteID uint64
 	var currentVote bool
 
-	if err := tx.QueryRow(getUserIdAndNicknameByNickname, data.UserNickname).
+	if err := tx.QueryRow(getUserByNickname, data.UserNickname).
 		Scan(&data.UserNickname); err != nil {
 		return nil, err
 	}

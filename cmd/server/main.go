@@ -3,7 +3,6 @@ package main
 import (
 	"github.com/ZorinArsenij/tech-db-forum/internal/app/delivery/http"
 	"github.com/ZorinArsenij/tech-db-forum/internal/app/infrastructure/repository/postgresql"
-	"github.com/ZorinArsenij/tech-db-forum/internal/app/infrastructure/repository/postgresql/migrations"
 	"github.com/ZorinArsenij/tech-db-forum/internal/app/usecase"
 	"github.com/jackc/pgx"
 	"github.com/valyala/fasthttp"
@@ -26,7 +25,7 @@ func main() {
 	if err != nil {
 		log.Fatal("database connection refused1")
 	}
-	if err := migrations.MakeMigrations(conn, "build/schema/0_initial.sql"); err != nil {
+	if err := postgresql.ExecFromFile(conn, "build/schema/0_initial.sql"); err != nil {
 		log.Fatal("make migrations failed:", err)
 	}
 	conn.Close()
@@ -39,6 +38,7 @@ func main() {
 	// Create prepared statements
 	postgresql.PrepareStatements(conn)
 
+	// Create interactors
 	userInteractor := usecase.NewUserInteractor(postgresql.NewUserRepo(conn))
 	forumInteractor := usecase.NewForumInteractor(postgresql.NewForumRepo(conn))
 	threadInteractor := usecase.NewThreadInteractor(postgresql.NewThreadRepo(conn))

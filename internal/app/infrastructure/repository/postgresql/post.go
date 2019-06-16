@@ -3,7 +3,6 @@ package postgresql
 import (
 	"context"
 	"errors"
-	"github.com/ZorinArsenij/tech-db-forum/internal/app/infrastructure/repository/postgresql/cluster"
 	"github.com/emirpasic/gods/sets/treeset"
 	"github.com/emirpasic/gods/utils"
 	"log"
@@ -237,7 +236,7 @@ func (p *Post) GetPost(id string, related map[string]bool) (*post.Info, error) {
 
 	if value, exists := related["user"]; value && exists {
 		var author user.User
-		if err := p.conn.QueryRow(getUserByNickname, post.UserNickname).
+		if err := p.conn.QueryRow(getUserInfoByNickname, post.UserNickname).
 			Scan(&author.Nickname, &author.Email, &author.Fullname, &author.About); err != nil {
 			return nil, err
 		}
@@ -303,7 +302,7 @@ func getUsersBatch(tx *pgx.Tx, data *post.PostsCreate) (*map[string]user.Info, e
 
 	nicknames := nicknamesSet.Values()
 	for _, nickname := range nicknames {
-		batch.Queue(getUserByNickname, []interface{}{nickname}, nil, nil)
+		batch.Queue(getUserInfoByNickname, []interface{}{nickname}, nil, nil)
 	}
 
 	if err := batch.Send(context.Background(), nil); err != nil {
@@ -439,73 +438,17 @@ func (p *Post) CreatePosts(data *post.PostsCreate, slugOrId string) (*post.Posts
 
 	CurrentPostNumber += len(*data)
 	if CurrentPostNumber >= ClusteringStep {
-		if err := cluster.CreateClusters(p.conn, "build/schema/1_cluster.sql"); err != nil {
+		if err := ExecFromFile(p.conn, "build/schema/1_cluster.sql"); err != nil {
 			log.Fatal("[Failed] creating clusters. Error:", err)
+		}
+
+		if _, err := p.conn.Exec("VACUUM ANALYZE;"); err != nil {
+			log.Fatal("[Failed] vacuum analyze. Error:", err)
 		}
 	}
 
 	return posts, nil
 }
-
-//func (p *Post) CreatePosts(data *post.PostsCreate, slugOrId string) (*post.Posts, error) {
-//	if len(*data) == 0 {
-//		return nil, nil
-//	}
-//
-//	tx, err := p.conn.Begin()
-//	if err != nil {
-//		return nil, err
-//	}
-//	defer tx.Rollback()
-//
-//	var threadID, userID uint64
-//	var forumSlug string
-//
-//	createTime := time.Now()
-//	posts := make(post.Posts, 0, 0)
-//
-//	if err := tx.QueryRow(getThreadShortBySlugOrId, slugOrId).Scan(&threadID, &forumSlug); err != nil {
-//		return nil, err
-//	}
-//
-//	for _, newPost := range *data {
-//		if err := tx.QueryRow(getUserIdAndNicknameByNickname, newPost.UserNickname).Scan(&userID, &newPost.UserNickname); err != nil {
-//			return nil, err
-//		}
-//
-//		parents := make([]int32, 0, 0)
-//		var root int
-//
-//		if newPost.Parent != 0 {
-//			parents = make([]int32, 0, 0)
-//			if err := tx.QueryRow(getPostByIdAndThread, newPost.Parent, threadID).Scan(&parents, &root); err != nil {
-//				return nil, errors.New("postParentDoesNotExist")
-//			}
-//
-//			parents = append(parents, newPost.Parent)
-//		}
-//
-//		var created post.Post
-//		if newPost.Parent == 0 {
-//			if err := tx.QueryRow(createPostRoot, newPost.Message, createTime, userID, newPost.UserNickname, threadID, forumSlug, newPost.Parent, parents).Scan(&created.ID, &created.Message, &created.Created, &created.IsEdited, &created.UserNickname, &created.ThreadID, &created.ForumSlug, &created.Parent); err != nil {
-//				return nil, err
-//			}
-//		} else {
-//			if err := tx.QueryRow(createPost, newPost.Message, createTime, userID, newPost.UserNickname, threadID, forumSlug, newPost.Parent, parents, root).Scan(&created.ID, &created.Message, &created.Created, &created.IsEdited, &created.UserNickname, &created.ThreadID, &created.ForumSlug, &created.Parent); err != nil {
-//				return nil, err
-//			}
-//		}
-//
-//		posts = append(posts, created)
-//	}
-//
-//	if _, err := tx.Exec(updateForumPosts, len(*data), forumSlug); err != nil {
-//		return nil, err
-//	}
-//
-//	tx.Commit()
-//	return &posts, nil
-//}
 
 func (p *Post) GetPostsFlat(slugOrId string, limit *int, since *string, orderDesc bool) (*post.Posts, error) {
 	var threadID uint64
