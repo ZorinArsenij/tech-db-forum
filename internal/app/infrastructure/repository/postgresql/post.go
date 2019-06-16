@@ -3,6 +3,7 @@ package postgresql
 import (
 	"context"
 	"errors"
+	"github.com/ZorinArsenij/tech-db-forum/internal/app/infrastructure/repository/postgresql/cluster"
 	"github.com/emirpasic/gods/sets/treeset"
 	"github.com/emirpasic/gods/utils"
 	"log"
@@ -206,6 +207,14 @@ var postQueries = map[string]string{
 	ORDER BY id DESC
 	LIMIT $2`,
 }
+
+var (
+	CurrentPostNumber = 0
+)
+
+const (
+	ClusteringStep = 1500000
+)
 
 func NewPostRepo(conn *pgx.ConnPool) *Post {
 	return &Post{
@@ -426,6 +435,13 @@ func (p *Post) CreatePosts(data *post.PostsCreate, slugOrId string) (*post.Posts
 	if err := createForumUsers(p.conn, forumSlug, users); err != nil {
 		log.Println("[Failed] creating forum users. Error:", err)
 		return nil, err
+	}
+
+	CurrentPostNumber += len(*data)
+	if CurrentPostNumber >= ClusteringStep {
+		if err := cluster.CreateClusters(p.conn, "build/schema/1_cluster.sql"); err != nil {
+			log.Fatal("[Failed] creating clusters. Error:", err)
+		}
 	}
 
 	return posts, nil

@@ -52,5 +52,6 @@ func (s *Service) Clear() error {
 	}
 
 	tx.Commit()
+	CurrentPostNumber = 0
 	return nil
 }
