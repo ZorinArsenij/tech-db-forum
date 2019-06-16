@@ -117,5 +117,5 @@ CREATE TABLE IF NOT EXISTS forum_client (
 CREATE UNIQUE INDEX IF NOT EXISTS forum_client_index
   ON forum_client (forum_slug, nickname);
 
-CREATE INDEX IF NOT EXISTS forum_users_covering_index
+CREATE INDEX IF NOT EXISTS forum_client_covering_index
   ON forum_client (forum_slug, nickname, email, fullname, about);
