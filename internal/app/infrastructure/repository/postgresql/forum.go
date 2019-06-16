@@ -27,8 +27,8 @@ var forumQueries = map[string]string{
 	FROM forum
 	WHERE slug = $1;`,
 
-	createForum: `INSERT INTO forum (slug, title, user_id, user_nickname) 
-	VALUES ($1, $2, $3, $4)
+	createForum: `INSERT INTO forum (slug, title, user_nickname) 
+	VALUES ($1, $2, $3)
 	RETURNING slug, title, posts, threads, user_nickname;`,
 
 	getForumIdAndSlugBySlug: `SELECT id, slug
@@ -173,9 +173,7 @@ func (f *Forum) CreateForum(data *forum.Create) (*forum.Forum, error) {
 	}
 	defer tx.Rollback()
 
-	var id uint64
-
-	if err := tx.QueryRow(getUserIdAndNicknameByNickname, data.UserNickname).Scan(&id, &data.UserNickname); err != nil {
+	if err := tx.QueryRow(getUserIdAndNicknameByNickname, data.UserNickname).Scan(&data.UserNickname); err != nil {
 		return nil, err
 	}
 
@@ -185,7 +183,7 @@ func (f *Forum) CreateForum(data *forum.Create) (*forum.Forum, error) {
 		return forum, errors.New("ForumAlreadyExists")
 	}
 
-	if err := tx.QueryRow(createForum, data.Slug, data.Title, id, data.UserNickname).
+	if err := tx.QueryRow(createForum, data.Slug, data.Title, data.UserNickname).
 		Scan(&forum.Slug, &forum.Title, &forum.Posts, &forum.Threads, &forum.UserNickname); err != nil {
 		return nil, err
 	}

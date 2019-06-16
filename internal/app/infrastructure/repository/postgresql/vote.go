@@ -13,12 +13,12 @@ const (
 )
 
 var voteQueries = map[string]string{
-	createVote: `INSERT INTO vote (voice, user_id, thread_id)
+	createVote: `INSERT INTO vote (voice, user_nickname, thread_id)
 	VALUES ($1, $2, $3)`,
 
 	getVote: `SELECT id, voice
 	FROM vote
-	WHERE user_id = $1 AND thread_id = $2`,
+	WHERE user_nickname = $1 AND thread_id = $2`,
 
 	updateVote: `UPDATE vote
 	SET voice = $1
@@ -42,11 +42,11 @@ func (v *Vote) CreateVote(data *vote.Vote, slugOrId string) (*thread.Thread, err
 	}
 	defer tx.Rollback()
 
-	var userID, threadID, voteID uint64
+	var threadID, voteID uint64
 	var currentVote bool
 
 	if err := tx.QueryRow(getUserIdAndNicknameByNickname, data.UserNickname).
-		Scan(&userID, &data.UserNickname); err != nil {
+		Scan(&data.UserNickname); err != nil {
 		return nil, err
 	}
 
@@ -56,7 +56,7 @@ func (v *Vote) CreateVote(data *vote.Vote, slugOrId string) (*thread.Thread, err
 		return nil, err
 	}
 
-	if err := tx.QueryRow(getVote, userID, threadID).Scan(&voteID, &currentVote); err == nil {
+	if err := tx.QueryRow(getVote, data.UserNickname, threadID).Scan(&voteID, &currentVote); err == nil {
 		if currentVote != data.Voice {
 			if _, err := tx.Exec(updateVote, data.Voice, voteID); err != nil {
 				return nil, err
@@ -66,7 +66,7 @@ func (v *Vote) CreateVote(data *vote.Vote, slugOrId string) (*thread.Thread, err
 			data.Rating = 0
 		}
 	} else {
-		if _, err = tx.Exec(createVote, data.Voice, userID, threadID); err != nil {
+		if _, err = tx.Exec(createVote, data.Voice, data.UserNickname, threadID); err != nil {
 			return nil, err
 		}
 
