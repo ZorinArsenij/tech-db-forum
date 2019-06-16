@@ -2,14 +2,12 @@ package postgresql
 
 import (
 	"errors"
-
 	"github.com/ZorinArsenij/tech-db-forum/internal/app/domain/user"
 	"github.com/jackc/pgx"
 )
 
 const (
 	getUserByNickname              = "getUserByNickname"
-	getUserInfoByNickname          = "getUserInfoByNickname"
 	updateUser                     = "updateUser"
 	getUsersWithEmailAndNickname   = "getUsersWithEmailAndNickname"
 	createUser                     = "createUser"
@@ -18,10 +16,7 @@ const (
 )
 
 var userQueries = map[string]string{
-	getUserByNickname: `SELECT email, nickname, fullname, about 
-	FROM client WHERE nickname = $1;`,
-
-	getUserInfoByNickname: `SELECT id, email, nickname, fullname, about 
+	getUserByNickname: `SELECT nickname, email, fullname, about 
 	FROM client WHERE nickname = $1;`,
 
 	updateUser: `UPDATE client 
@@ -31,15 +26,15 @@ var userQueries = map[string]string{
 	WHERE nickname = $4 
 	RETURNING email, nickname, fullname, about;`,
 
-	getUsersWithEmailAndNickname: `SELECT email, nickname, fullname, about 
+	getUsersWithEmailAndNickname: `SELECT nickname, email, fullname, about
 	FROM client 
 	WHERE email = $1 OR nickname = $2;`,
 
-	createUser: `INSERT INTO client (email, nickname, fullname, about)
+	createUser: `INSERT INTO client (nickname, email, fullname, about)
 	VALUES ($1, $2, $3, $4)
-	RETURNING email, nickname, fullname, about;`,
+	RETURNING nickname, email, fullname, about;`,
 
-	getUserIdAndNicknameByNickname: `SELECT id, nickname
+	getUserIdAndNicknameByNickname: `SELECT nickname
 	FROM client
 	WHERE nickname = $1;`,
 
@@ -60,7 +55,7 @@ type User struct {
 
 func (u *User) GetUserByNickname(nickname string) (*user.User, error) {
 	received := &user.User{}
-	if err := u.conn.QueryRow(getUserByNickname, nickname).Scan(&received.Email, &received.Nickname, &received.Fullname, &received.About); err != nil {
+	if err := u.conn.QueryRow(getUserByNickname, nickname).Scan(&received.Nickname, &received.Email, &received.Fullname, &received.About); err != nil {
 		return nil, err
 	}
 
@@ -97,14 +92,14 @@ func (u *User) CreateUser(data *user.User) (*user.Users, error) {
 
 	for rows.Next() {
 		var row user.User
-		rows.Scan(&row.Email, &row.Nickname, &row.Fullname, &row.About)
+		rows.Scan(&row.Nickname, &row.Email, &row.Fullname, &row.About)
 		users = append(users, row)
 	}
 	rows.Close()
 
 	if len(users) == 0 {
 		var created user.User
-		if err := tx.QueryRow(createUser, data.Email, data.Nickname, data.Fullname, data.About).Scan(&created.Email, &created.Nickname, &created.Fullname, &created.About); err != nil {
+		if err := tx.QueryRow(createUser, data.Nickname, data.Email, data.Fullname, data.About).Scan(&created.Nickname, &created.Email, &created.Fullname, &created.About); err != nil {
 			return nil, err
 		}
 		users = append(users, created)

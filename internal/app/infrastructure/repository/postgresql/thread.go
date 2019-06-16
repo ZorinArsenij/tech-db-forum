@@ -41,7 +41,7 @@ var threadQueries = map[string]string{
 	FROM thread
 	WHERE slug = $1 OR id::TEXT = $1`,
 
-	createThread: `INSERT INTO thread (slug, title, message, forum_id, forum_slug, user_id, user_nickname, created)
+	createThread: `INSERT INTO thread (slug, title, message, forum_id, forum_slug, user_nickname, created)
 	VALUES (
 		$1,
 		$2,
@@ -49,8 +49,7 @@ var threadQueries = map[string]string{
 		$4,
 		$5,
 		$6,
-		$7,
-		$8
+		$7
 	)
 	RETURNING id, slug, title, message, forum_slug, user_nickname, created, votes;`,
 
@@ -111,10 +110,10 @@ func (t *Thread) CreateThread(data *thread.Create) (*thread.Thread, error) {
 	}
 	defer tx.Rollback()
 
-	var userID, forumID uint64
+	var forumID uint64
 
 	userInfo := &user.User{}
-	if err := tx.QueryRow(getUserInfoByNickname, data.UserNickname).Scan(&userID, &userInfo.Email, &userInfo.Nickname, &userInfo.Fullname, &userInfo.About); err != nil {
+	if err := tx.QueryRow(getUserByNickname, data.UserNickname).Scan(&userInfo.Nickname, &userInfo.Email, &userInfo.Fullname, &userInfo.About); err != nil {
 		return nil, err
 	}
 
@@ -130,7 +129,7 @@ func (t *Thread) CreateThread(data *thread.Create) (*thread.Thread, error) {
 		}
 	}
 
-	if err := tx.QueryRow(createThread, data.Slug, data.Title, data.Message, forumID, data.ForumSlug, userID, data.UserNickname, data.Created).Scan(&received.ID, &received.Slug, &received.Title, &received.Message, &received.ForumSlug, &received.UserNickname, &received.Created, &received.Votes); err != nil {
+	if err := tx.QueryRow(createThread, data.Slug, data.Title, data.Message, forumID, data.ForumSlug, data.UserNickname, data.Created).Scan(&received.ID, &received.Slug, &received.Title, &received.Message, &received.ForumSlug, &received.UserNickname, &received.Created, &received.Votes); err != nil {
 		return nil, err
 	}
 

@@ -5,9 +5,9 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
     go build -mod vendor -a -installsuffix cgo -ldflags="-w -s" -o api ./cmd/server/
 
 
-FROM ubuntu:18.04 AS release
+FROM ubuntu:19.04 AS release
 
-ENV PGVER 10
+ENV PGVER 11
 RUN apt -y update && apt install -y postgresql-$PGVER
 
 USER postgres

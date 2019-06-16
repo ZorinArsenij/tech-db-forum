@@ -54,12 +54,12 @@ var postQueries = map[string]string{
 	FROM post
 	WHERE id = $1;`,
 
-	createPost: `INSERT INTO post (message, created, user_id, user_nickname, thread_id, forum_slug, parent, parents, root)
-	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+	createPost: `INSERT INTO post (message, created, user_nickname, thread_id, forum_slug, parent, parents, root)
+	VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 	RETURNING id, message, created, is_edited, user_nickname, thread_id, forum_slug, parent`,
 
-	createPostRoot: `INSERT INTO post (message, created, user_id, user_nickname, thread_id, forum_slug, parent, parents, root)
-	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, (SELECT CURRVAL('post_id_seq')))
+	createPostRoot: `INSERT INTO post (message, created, user_nickname, thread_id, forum_slug, parent, parents, root)
+	VALUES ($1, $2, $3, $4, $5, $6, $7, (SELECT CURRVAL('post_id_seq')))
 	RETURNING id, message, created, is_edited, user_nickname, thread_id, forum_slug, parent`,
 
 	updatePost: `UPDATE post
@@ -67,6 +67,7 @@ var postQueries = map[string]string{
 	is_edited = TRUE
 	WHERE id = $2;`,
 
+	// Index???
 	getPostsFlat: `SELECT id, message, created, is_edited, user_nickname, thread_id, forum_slug, parent
 	FROM post
 	WHERE thread_id = $1`,
@@ -228,7 +229,7 @@ func (p *Post) GetPost(id string, related map[string]bool) (*post.Info, error) {
 	if value, exists := related["user"]; value && exists {
 		var author user.User
 		if err := p.conn.QueryRow(getUserByNickname, post.UserNickname).
-			Scan(&author.Email, &author.Nickname, &author.Fullname, &author.About); err != nil {
+			Scan(&author.Nickname, &author.Email, &author.Fullname, &author.About); err != nil {
 			return nil, err
 		}
 		info.Author = &author
@@ -293,7 +294,7 @@ func getUsersBatch(tx *pgx.Tx, data *post.PostsCreate) (*map[string]user.Info, e
 
 	nicknames := nicknamesSet.Values()
 	for _, nickname := range nicknames {
-		batch.Queue(getUserInfoByNickname, []interface{}{nickname}, nil, nil)
+		batch.Queue(getUserByNickname, []interface{}{nickname}, nil, nil)
 	}
 
 	if err := batch.Send(context.Background(), nil); err != nil {
@@ -303,7 +304,7 @@ func getUsersBatch(tx *pgx.Tx, data *post.PostsCreate) (*map[string]user.Info, e
 	users := make(map[string]user.Info, len(nicknames))
 	for _, nickname := range nicknames {
 		info := user.Info{}
-		if err := batch.QueryRowResults().Scan(&info.ID, &info.Email, &info.Nickname, &info.Fullname, &info.About); err != nil {
+		if err := batch.QueryRowResults().Scan(&info.Nickname, &info.Email, &info.Fullname, &info.About); err != nil {
 			return nil, err
 		}
 		users[strings.ToLower(nickname.(string))] = info
@@ -338,21 +339,20 @@ func getPostParentsBatch(tx *pgx.Tx, data *post.PostsCreate, threadID uint64) er
 	return nil
 }
 
-func createPostsBatch(tx *pgx.Tx, data *post.PostsCreate, threadID uint64, forumSlug string, users *map[string]user.Info) (*post.Posts, error) {
+func createPostsBatch(tx *pgx.Tx, data *post.PostsCreate, threadID uint64, forumSlug string) (*post.Posts, error) {
 	batch := tx.BeginBatch()
 	defer batch.Close()
 
 	createTime := time.Now()
 
 	for _, newPost := range *data {
-		userID := (*users)[strings.ToLower(newPost.UserNickname)].ID
 		if newPost.Parent == 0 {
 			batch.Queue(createPostRoot,
-				[]interface{}{newPost.Message, createTime, userID, newPost.UserNickname, threadID, forumSlug, newPost.Parent, []int32{}},
+				[]interface{}{newPost.Message, createTime, newPost.UserNickname, threadID, forumSlug, newPost.Parent, []int32{}},
 				nil, nil)
 		} else {
 			batch.Queue(createPost,
-				[]interface{}{newPost.Message, createTime, userID, newPost.UserNickname, threadID, forumSlug, newPost.Parent, newPost.Parents, newPost.Root},
+				[]interface{}{newPost.Message, createTime, newPost.UserNickname, threadID, forumSlug, newPost.Parent, newPost.Parents, newPost.Root},
 				nil, nil)
 		}
 	}
@@ -387,7 +387,7 @@ func createForumUsers(conn *pgx.ConnPool, forumSlug string, users *map[string]us
 func (p *Post) CreatePosts(data *post.PostsCreate, slugOrId string) (*post.Posts, error) {
 	tx, err := p.conn.Begin()
 	if err != nil {
-		log.Println("Failed creating transaction. Error:", err)
+		log.Println("[Failed] creating transaction. Error:", err)
 		return nil, err
 	}
 	defer tx.Rollback()
@@ -396,35 +396,35 @@ func (p *Post) CreatePosts(data *post.PostsCreate, slugOrId string) (*post.Posts
 	var forumSlug string
 
 	if err := tx.QueryRow(getThreadShortBySlugOrId, slugOrId).Scan(&threadID, &forumSlug); err != nil {
-		log.Println("Failed get threadId by forum slug or id. Error:", err)
+		log.Println("[Failed] get threadId by forum slug or id. Error:", err)
 		return nil, err
 	}
 
 	users, err := getUsersBatch(tx, data)
 	if err != nil {
-		log.Println("Failed getting users using batch. Error:", err)
+		log.Println("[Failed] getting users using batch. Error:", err)
 		return nil, err
 	}
 
 	if err := getPostParentsBatch(tx, data, threadID); err != nil {
-		log.Println("Failed getting posts parents. Error:", err)
+		log.Println("[Failed] getting posts parents. Error:", err)
 		return nil, err
 	}
 
-	posts, err := createPostsBatch(tx, data, threadID, forumSlug, users)
+	posts, err := createPostsBatch(tx, data, threadID, forumSlug)
 	if err != nil {
-		log.Println("Failed creating posts. Error:", err)
+		log.Println("[Failed] creating posts. Error:", err)
 		return nil, err
 	}
 
 	if _, err := tx.Exec(updateForumPosts, len(*data), forumSlug); err != nil {
-		log.Println("Failed updating forum posts. Error:", err)
+		log.Println("[Failed] updating forum posts. Error:", err)
 		return nil, err
 	}
 	tx.Commit()
 
 	if err := createForumUsers(p.conn, forumSlug, users); err != nil {
-		log.Println("Failed creating forum users. Error:", err)
+		log.Println("[Failed] creating forum users. Error:", err)
 		return nil, err
 	}
 
