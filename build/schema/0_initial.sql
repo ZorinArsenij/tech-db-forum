@@ -1,6 +1,6 @@
 CREATE EXTENSION IF NOT EXISTS CITEXT;
 
--- DROP TABLE IF EXISTS client, forum, thread, post, vote, forum_client;
+DROP TABLE IF EXISTS client, forum, thread, post, vote, forum_client;
 
 CREATE TABLE IF NOT EXISTS client (
   id SERIAL PRIMARY KEY,
@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS client (
   nickname CITEXT NOT NULL UNIQUE,
   fullname TEXT NOT NULL,
   about TEXT NOT NULL DEFAULT ''
-);
+) WITH (autovacuum_enabled = FALSE);
 
 CREATE INDEX IF NOT EXISTS client_email_index
   ON client(email);
@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS forum (
   threads INTEGER NOT NULL DEFAULT 0,
   posts BIGINT NOT NULL DEFAULT 0,
   user_nickname CITEXT NOT NULL
-);
+) WITH (autovacuum_enabled = FALSE);
 
 CREATE INDEX IF NOT EXISTS forum_slug_index
   ON forum(slug) INCLUDE (title, posts, threads, user_nickname, id);
@@ -44,7 +44,7 @@ CREATE TABLE IF NOT EXISTS thread (
   user_nickname CITEXT NOT NULL,
   created TIMESTAMPTZ,
   votes INTEGER NOT NULL DEFAULT 0
-);
+) WITH (autovacuum_enabled = FALSE);
 
 CREATE INDEX IF NOT EXISTS thread_slug_index
   ON thread(slug) INCLUDE (id, title, message, forum_slug, user_nickname, created, votes);
@@ -70,7 +70,7 @@ CREATE TABLE IF NOT EXISTS post (
   parent INT DEFAULT 0,
   parents INT [] NOT NULL,
   root INT NOT NULL
-);
+) WITH (autovacuum_enabled = FALSE);
 
 CREATE INDEX IF NOT EXISTS post_id_thread_index
   ON post(id, thread_id);
@@ -101,7 +101,7 @@ CREATE TABLE IF NOT EXISTS vote (
   voice BOOLEAN,
   user_nickname CITEXT NOT NULL,
   thread_id INTEGER NOT NULL REFERENCES thread(id)
-);
+) WITH (autovacuum_enabled = FALSE);
 
 CREATE INDEX  IF NOT EXISTS vote_user_nickname_thread_id_index
   ON vote(user_nickname, thread_id);
@@ -112,7 +112,7 @@ CREATE TABLE IF NOT EXISTS forum_client (
   nickname CITEXT NOT NULL,
   fullname TEXT NOT NULL,
   about TEXT NOT NULL DEFAULT ''
-);
+) WITH (autovacuum_enabled = FALSE);
 
 CREATE UNIQUE INDEX IF NOT EXISTS forum_client_index
   ON forum_client (forum_slug, nickname);
