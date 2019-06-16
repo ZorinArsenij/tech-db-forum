@@ -4,7 +4,7 @@ DROP TABLE IF EXISTS client, forum, thread, post, vote, forum_client;
 
 -- Client
 
-CREATE TABLE IF NOT EXISTS client (
+CREATE UNLOGGED TABLE IF NOT EXISTS client (
   id SERIAL PRIMARY KEY,
   email CITEXT NOT NULL UNIQUE,
   nickname CITEXT NOT NULL UNIQUE,
@@ -20,7 +20,7 @@ CREATE INDEX IF NOT EXISTS client_covering_index
 
 -- Forum
 
-CREATE TABLE IF NOT EXISTS forum (
+CREATE UNLOGGED TABLE IF NOT EXISTS forum (
   id SERIAL PRIMARY KEY,
   slug CITEXT NOT NULL UNIQUE,
   title TEXT NOT NULL,
@@ -34,7 +34,7 @@ CREATE INDEX IF NOT EXISTS forum_slug_index
 
 -- Thread
 
-CREATE TABLE IF NOT EXISTS thread (
+CREATE UNLOGGED TABLE IF NOT EXISTS thread (
   id SERIAL PRIMARY KEY,
   slug CITEXT DEFAULT NULL,
   title TEXT NOT NULL,
@@ -57,7 +57,7 @@ CREATE INDEX IF NOT EXISTS thread_created_index
 
 -- Post
 
-CREATE TABLE IF NOT EXISTS post (
+CREATE UNLOGGED TABLE IF NOT EXISTS post (
   id SERIAL PRIMARY KEY,
   message TEXT NOT NULL,
   created TIMESTAMPTZ,
@@ -87,19 +87,19 @@ CREATE INDEX IF NOT EXISTS post_root_parents_func_index
 
 -- Vote
 
-CREATE TABLE IF NOT EXISTS vote (
+CREATE UNLOGGED TABLE IF NOT EXISTS vote (
   id SERIAL PRIMARY KEY,
   voice BOOLEAN,
   user_nickname CITEXT NOT NULL,
   thread_id INTEGER NOT NULL
 ) WITH (autovacuum_enabled = FALSE);
 
-CREATE INDEX  IF NOT EXISTS vote_user_nickname_thread_id_index
+CREATE INDEX IF NOT EXISTS vote_user_nickname_thread_id_index
   ON vote(user_nickname, thread_id);
 
 -- Forum client
 
-CREATE TABLE IF NOT EXISTS forum_client (
+CREATE UNLOGGED TABLE IF NOT EXISTS forum_client (
   forum_slug CITEXT NOT NULL,
   email CITEXT NOT NULL,
   nickname CITEXT NOT NULL,
